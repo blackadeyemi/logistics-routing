@@ -28,6 +28,8 @@ app.use('/driver', require('./routes/driver'));
 app.use('/stats', require('./routes/stats'));
 app.use('/settings', require('./routes/settings'));
 app.use('/ai', require('./routes/ai'));
+app.use('/ai', require('./routes/copilot'));
+app.use('/knowledge', require('./routes/knowledge'));
 
 app.use(notFound);
 app.use(errorHandler);

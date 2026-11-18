@@ -119,3 +119,51 @@ export function conflictMessages(err: unknown): string[] {
   if (!(err instanceof ApiError) || !Array.isArray(err.details)) return [];
   return (err.details as { message?: string }[]).map((d) => d.message ?? '').filter(Boolean);
 }
+
+/**
+ * POST that answers with server-sent events (the copilot). Calls onEvent
+ * for each `data:` event until the stream ends. Errors before the stream
+ * starts throw ApiError like request() does.
+ */
+export async function staffStream(path: string, body: unknown, onEvent: (event: Record<string, unknown>) => void, signal?: AbortSignal): Promise<void> {
+  const token = tokens.get('staff');
+  let res: Response;
+  try {
+    res = await fetch(BASE + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(body),
+      signal,
+    });
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') return;
+    throw new ApiError(0, 'No connection. Check your network and try again.');
+  }
+  if (!res.ok || !res.body) {
+    const data = await res.json().catch(() => null);
+    if (res.status === 401 && token) {
+      tokens.clear('staff');
+      window.dispatchEvent(new CustomEvent('auth:expired', { detail: 'staff' }));
+    }
+    throw new ApiError(res.status, data?.error ?? `Request failed (${res.status})`, data?.details);
+  }
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let i = buf.indexOf('\n\n');
+      while (i >= 0) {
+        const line = buf.slice(0, i).split('\n').find((l) => l.startsWith('data: '));
+        buf = buf.slice(i + 2);
+        i = buf.indexOf('\n\n');
+        if (line) onEvent(JSON.parse(line.slice(6)));
+      }
+    }
+  } catch (err) {
+    if ((err as Error).name !== 'AbortError') throw new ApiError(0, 'The connection dropped while the copilot was answering.');
+  }
+}

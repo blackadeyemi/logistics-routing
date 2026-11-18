@@ -115,6 +115,7 @@ Order status: `pending` (no route), `assigned`, `picked_up`, `en_route`,
 | POST | /routes | `driver_id, vehicle_id?, route_date?` |
 | PATCH | /routes/:id | `driver_id?` (only before it starts), `vehicle_id?` |
 | PUT | /routes/:id/stops | `stop_ids`: the full ordered list |
+| POST | /routes/stops/:id/status | `action` (arrive, start, complete, skip): dispatch records a stop update for the driver, same rules as the driver app, recorded as done by staff |
 | DELETE | /routes/:id | Only when no stop has started |
 
 One route per driver per day. The vehicle defaults to the driver's.
@@ -213,6 +214,41 @@ Response:
   draft. Key and model errors are the same as `/settings/ai/check`.
 - Every call is recorded in `ai_usage` (user, feature, model, tokens,
   duration, ok).
+
+### Knowledge (staff)
+
+| Method | Path | Who | Notes |
+| --- | --- | --- | --- |
+| GET | `/knowledge/documents` | staff | SOP documents with their chunk counts |
+| GET | `/knowledge/documents/:id` | staff | |
+| POST | `/knowledge/documents` | admin | `title, body`. Body is Markdown; each `##` section becomes one chunk. Indexed before replying |
+| PUT | `/knowledge/documents/:id` | admin | `title, body`. Re-indexed |
+| DELETE | `/knowledge/documents/:id` | admin | Removes its chunks too |
+| GET | `/knowledge/search` | staff | `?q=&limit=5&source=sop|stop_note`. Hybrid pgvector and full-text search; returns `id, source_type, source_id, title, content, similarity, score, order_id` |
+| GET | `/knowledge/stats` | staff | `documents, sop_chunks, note_chunks` |
+| POST | `/knowledge/reindex` | admin | Rebuilds every chunk |
+
+Stop notes are indexed automatically after an order is created or its
+notes or addresses change. Embeddings come from service-python's local
+model, so search needs service-python running but no API key.
+
+### Copilot (staff)
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| POST | `/ai/chat` | `conversation_id?, message`. Server-sent events: `start {conversation_id}`, `text {delta}`, `tool {id, name, label, status, input?, detail?}`, `proposal {action}`, `sources {items}`, `error {message}`, `done {conversation_id, usage}`. Admins may add `model` to override the Settings model for one turn |
+| GET | `/ai/conversations` | Your last 20 conversations |
+| GET | `/ai/conversations/:id` | `display` (what the panel shows) and `actions` (proposals with their status) |
+| POST | `/ai/actions` | Used by service-python with the user's token: `conversation_id, prompt, tool, arguments`. Validates and previews a write, stores it as `proposed`, changes nothing else. 400/404/409 with a reason the agent can act on |
+| POST | `/ai/actions/:id/confirm` | Applies a proposal through the public endpoints as the confirming user. Status becomes `confirmed` with `result`, or `failed` with `result.error`. A second confirm is 409 |
+| POST | `/ai/actions/:id/reject` | Status `rejected`; nothing is applied |
+
+Write tools the copilot can propose: `create_order`, `update_order`,
+`cancel_order`, `assign_stops` (`driver_id, route_date?, stop_ids`: the
+driver's whole stop list for the day, creating the route if needed) and
+`update_stop_status` (`stop_id, action`). Only the user who owns the
+conversation, or an admin, can see or decide its proposals. Each copilot
+turn is logged in `ai_usage` with feature `copilot`.
 
 ### Settings
 

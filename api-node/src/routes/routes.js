@@ -4,7 +4,7 @@ const { asyncHandler, HttpError } = require('../errors');
 const { z, parse, id, idParam, isoDate } = require('../validation');
 const { requireAuth, STAFF } = require('../auth');
 const { staffActor, recordEvent } = require('../events');
-const { ROUTE_SELECT, getRoute, setRouteStops } = require('../dispatch');
+const { ROUTE_SELECT, getRoute, setRouteStops, applyStopAction } = require('../dispatch');
 
 const router = express.Router();
 router.use(requireAuth(...STAFF));
@@ -89,6 +89,19 @@ router.put('/:id/stops', asyncHandler(async (req, res) => {
 
 // Only routes where no stop has been started can be deleted. Their orders
 // go back to pending.
+// POST /routes/stops/:id/status { action } : a dispatcher records a stop
+// update for the driver, for example when the driver phones in. Same
+// rules as the driver app; the event is recorded as done by dispatch.
+router.post('/stops/:id/status', asyncHandler(async (req, res) => {
+  const stopId = parse(id, req.params.id);
+  const body = parse(z.object({ action: z.enum(['arrive', 'start', 'complete', 'skip']) }).strict(), req.body);
+  const route = await withTransaction(async (db) => {
+    const r = await applyStopAction(db, stopId, body, { type: 'user', id: req.user.id });
+    return getRoute(db, r.routeId);
+  });
+  res.json(route);
+}));
+
 router.delete('/:id', asyncHandler(async (req, res) => {
   const routeId = idParam(req);
   await withTransaction(async (db) => {

@@ -6,6 +6,7 @@ const { requireAuth, STAFF } = require('../auth');
 const { recordEvent, staffActor } = require('../events');
 const { pointSql, latLngSql, toLocation, lngLat } = require('../geo');
 const { resequenceRoute } = require('../dispatch');
+const { indexLater, indexStopNotes } = require('../knowledge');
 
 const router = express.Router();
 router.use(requireAuth(...STAFF));
@@ -140,6 +141,7 @@ router.post('/', asyncHandler(async (req, res) => {
     await recordEvent(db, { orderId, type: 'created', ...staffActor(req) });
     return getOrder(db, orderId);
   });
+  if (order.pickup_notes || order.dropoff_notes) indexLater(indexStopNotes, order.id);
   res.status(201).json(order);
 }));
 
@@ -192,6 +194,8 @@ router.patch('/:id', asyncHandler(async (req, res) => {
     await recordEvent(db, { orderId, type: 'updated', ...staffActor(req) });
     return getOrder(db, orderId);
   });
+  // Addresses are part of a note's chunk, so any change re-indexes.
+  if ('pickup_notes' in b || 'dropoff_notes' in b || 'pickup_address' in b || 'dropoff_address' in b) indexLater(indexStopNotes, orderId);
   res.json(order);
 }));
 

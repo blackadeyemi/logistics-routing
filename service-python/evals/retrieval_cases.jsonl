@@ -1,0 +1,28 @@
+{"id": "cod-screenshot", "question": "The customer sent a screenshot of a transfer. Can the rider release the parcel?", "expect": ["sop:Cash on delivery: Collecting payment"]}
+{"id": "cod-part-payment", "question": "Buyer only has part of the money at the door", "expect": ["sop:Cash on delivery: When the customer cannot pay"]}
+{"id": "cod-handover", "question": "When must riders submit the cash they collected?", "expect": ["sop:Cash on delivery: Handing over the cash"]}
+{"id": "failed-calls", "question": "How many times should the rider call before giving up on a delivery?", "expect": ["sop:Failed deliveries and returns: Before marking a delivery as failed"]}
+{"id": "failed-second-attempt", "question": "Do we charge for a second delivery attempt?", "expect": ["sop:Failed deliveries and returns: What happens next"]}
+{"id": "returns-pickup", "question": "A customer is sending an item back to the seller. Where is the pickup?", "expect": ["sop:Failed deliveries and returns: Returns from customers"]}
+{"id": "fragile-weak-box", "question": "The seller's packaging looks too weak for a glass item", "expect": ["sop:Fragile items, food and cakes: Packaging"]}
+{"id": "cake-bike", "question": "Can a birthday cake go on a motorbike?", "expect": ["sop:Fragile items, food and cakes: Cakes and food"]}
+{"id": "damaged-transit", "question": "The item broke on the way. Who pays for it?", "expect": ["sop:Fragile items, food and cakes: Damaged on the way"]}
+{"id": "estate-security", "question": "What should the rider tell estate security at the gate?", "expect": ["sop:Estates, offices and gated access: Gated estates"]}
+{"id": "vgc", "question": "Security procedure at VGC", "expect": ["sop:Estates, offices and gated access: Victoria Garden City and Lekki Phase 1"]}
+{"id": "office-tower", "question": "Rider is not allowed upstairs in an office building on VI", "expect": ["sop:Estates, offices and gated access: Offices and towers"]}
+{"id": "pickup-hours", "question": "What time do pickups stop each day?", "expect": ["sop:Rider safety, hours and weather: Working hours"]}
+{"id": "rain-ajah", "question": "Heavy rain and flooding around Ajah. What should riders do?", "expect": ["sop:Rider safety, hours and weather: Rain and flooding"]}
+{"id": "passenger", "question": "Can a rider carry a passenger on the bike?", "expect": ["sop:Rider safety, hours and weather: Safety"]}
+{"id": "abeokuta", "question": "Do we cover Abeokuta?", "expect": ["sop:Service areas and pricing: Where we deliver"]}
+{"id": "price-ikeja-lekki", "question": "How much is a delivery from Ikeja to Lekki?", "expect": ["sop:Service areas and pricing: Prices"]}
+{"id": "express", "question": "Is there a 3 hour delivery option?", "expect": ["sop:Service areas and pricing: Express"]}
+{"id": "note-gate-code", "question": "Gate code for the Okon family", "expect": ["note:Blessing Okon:dropoff"]}
+{"id": "note-doorbell", "question": "Which customer has a broken doorbell?", "expect": ["note:Emeka Nwosu:dropoff"]}
+{"id": "note-tejuosho", "question": "Who do I ask for at the Tejuosho market pickup?", "expect": ["note:Aisha Bello:pickup"]}
+{"id": "note-port", "question": "Port complex pickup: what does security need to see?", "expect": ["note:Halima Yusuf:pickup"]}
+{"id": "note-after-4pm", "question": "The Festac customer who is only home late in the afternoon", "expect": ["note:Ibrahim Musa:dropoff"]}
+{"id": "note-ajah-parking", "question": "Where should the rider park at Ajah market?", "expect": ["note:Segun Ogunleye:dropoff"]}
+{"id": "note-vase", "question": "Delivery instructions for the glass vase", "expect": ["note:Zainab Ahmed:dropoff"]}
+{"id": "note-green-gate", "question": "Magodo pickup at the house with the green gate", "expect": ["note:Obinna Chukwu:pickup"]}
+{"id": "mixed-transfer", "question": "Customer in Ajah pays by transfer. What must the rider do before handing over?", "expect": ["note:Femi Oladipo:dropoff", "sop:Cash on delivery: Collecting payment"]}
+{"id": "mixed-cake", "question": "Picking up the birthday cake from the Gbagada bakery", "expect": ["note:Ngozi Eze:pickup", "sop:Fragile items, food and cakes: Cakes and food"]}

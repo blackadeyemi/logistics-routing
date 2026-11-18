@@ -12,6 +12,7 @@ import anthropic
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
+from embed import DIMENSIONS, MODEL_NAME, embed
 from extract import MAX_MESSAGE_CHARS, extract_order
 
 log = logging.getLogger("ai")
@@ -94,3 +95,42 @@ async def extract_order_endpoint(body: ExtractRequest, x_anthropic_api_key: str 
     # One log line per request with token usage, never the message text.
     log.info(json.dumps({"event": "ai_request", "feature": "extract_order", **result["usage"]}))
     return result
+
+
+class EmbedRequest(BaseModel):
+    texts: list[str] = Field(min_length=1, max_length=256)
+    kind: str = Field(pattern="^(query|passage)$")
+
+
+@app.post("/ai/embed")
+def embed_endpoint(body: EmbedRequest):
+    """Embeddings for knowledge_chunks (passage) and searches (query).
+    A plain def, so FastAPI runs the CPU work in its thread pool."""
+    texts = [t[:4000] for t in body.texts]
+    return {"model": MODEL_NAME, "dimensions": DIMENSIONS, "vectors": embed(texts, body.kind)}
+
+
+class ChatRequest(BaseModel):
+    model: str = Field(min_length=1, max_length=100)
+    messages: list[dict] = Field(min_length=1)
+    conversation_id: int
+    prompt: str = Field(max_length=4000)
+    user_token: str = Field(min_length=10)
+    user: dict
+    today: str
+    ref_offset: int = 0
+
+
+@app.post("/ai/chat")
+async def chat_endpoint(body: ChatRequest, x_anthropic_api_key: str | None = Header(default=None)):
+    """One copilot turn as a server-sent event stream. api-node checks auth,
+    stores the conversation and keeps the final event to itself."""
+    from fastapi.responses import StreamingResponse
+
+    from copilot import run_turn
+
+    client_for(x_anthropic_api_key)  # 400 now if the key is missing
+    stream = run_turn(api_key=x_anthropic_api_key, model=body.model, messages=body.messages, user_token=body.user_token,
+                      conversation_id=body.conversation_id, prompt=body.prompt, user=body.user, today=body.today,
+                      ref_offset=body.ref_offset)
+    return StreamingResponse(stream, media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})

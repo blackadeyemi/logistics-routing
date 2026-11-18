@@ -51,4 +51,20 @@ async function callAi(path, body, { apiKey, timeoutMs = 30_000 } = {}) {
   return data;
 }
 
-module.exports = { aiConfig, callAi, AI_KEYS: KEYS };
+async function requireConfig() {
+  const cfg = await aiConfig();
+  if (!cfg.apiKey) throw new HttpError(409, 'AI is not set up. An admin can add an Anthropic API key on the Settings page.', { code: 'not_configured' });
+  if (!cfg.model) throw new HttpError(409, 'No AI model is selected. An admin can pick one on the Settings page.', { code: 'not_configured' });
+  return cfg;
+}
+
+async function logUsage(userId, feature, model, usage, ok) {
+  await pool.query(
+    `INSERT INTO ai_usage (user_id, feature, model, input_tokens, output_tokens, cache_read_tokens, duration_ms, ok)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [userId, feature, usage?.model || model, usage?.input_tokens ?? 0, usage?.output_tokens ?? 0,
+      usage?.cache_read_tokens ?? 0, usage?.duration_ms ?? null, ok],
+  );
+}
+
+module.exports = { aiConfig, callAi, serviceUrl, requireConfig, logUsage, AI_KEYS: KEYS };

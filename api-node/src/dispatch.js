@@ -173,7 +173,14 @@ function eventTime(occurredAt) {
 //   dispatcher to follow up.
 // Repeating an action that already happened is a no-op, so the PWA can
 // safely retry queued updates.
-async function applyDriverAction(db, driverId, stopId, { action, occurred_at: occurredAt, client_event_id: clientEventId }) {
+// A stop status change by the driver on that route, or by staff on the
+// driver's behalf (for example when the driver phones in). The rules are
+// the same; only who is recorded on the event differs.
+async function applyDriverAction(db, driverId, stopId, body) {
+  return applyStopAction(db, stopId, body, { type: 'driver', id: driverId });
+}
+
+async function applyStopAction(db, stopId, { action, occurred_at: occurredAt, client_event_id: clientEventId }, actor) {
   let at = eventTime(occurredAt);
 
   const { rows } = await db.query(
@@ -187,7 +194,8 @@ async function applyDriverAction(db, driverId, stopId, { action, occurred_at: oc
     [stopId],
   );
   const stop = rows[0];
-  if (!stop || Number(stop.driver_id) !== driverId) throw new HttpError(404, 'Stop not found on your routes');
+  if (!stop) throw new HttpError(404, actor.type === 'driver' ? 'Stop not found on your routes' : 'Stop not found on any route');
+  if (actor.type === 'driver' && Number(stop.driver_id) !== actor.id) throw new HttpError(404, 'Stop not found on your routes');
   const routeId = Number(stop.route_id);
 
   if (clientEventId) {
@@ -218,7 +226,7 @@ async function applyDriverAction(db, driverId, stopId, { action, occurred_at: oc
   }
 
   const event = (type) => recordEvent(db, {
-    orderId: stop.order_id, stopId, type, actorType: 'driver', actorId: driverId,
+    orderId: stop.order_id, stopId, type, actorType: actor.type, actorId: actor.id,
     clientEventId, occurredAt: at,
   });
   const noop = { routeId, replayed: true };
@@ -284,6 +292,6 @@ async function applyDriverAction(db, driverId, stopId, { action, occurred_at: oc
 }
 
 module.exports = {
-  DONE, resequenceRoute, refreshRouteStatus, ROUTE_SELECT,
+  DONE, resequenceRoute, refreshRouteStatus, ROUTE_SELECT, applyStopAction,
   getRoute, getRouteStops, setRouteStops, applyDriverAction,
 };

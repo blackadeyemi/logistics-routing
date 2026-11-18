@@ -6,9 +6,15 @@
 //
 // Logins: admin@example.com and dispatcher@example.com, password from
 // SEED_PASSWORD (default password123). Drivers log in with PIN 1234.
+//
+// --reset keeps app_settings (the saved API keys) and the ai_usage history:
+// TRUNCATE ... CASCADE through users would otherwise wipe both.
 require('dotenv').config();
+const fs = require('node:fs');
+const path = require('node:path');
 const bcrypt = require('bcrypt');
 const { pool, withTransaction } = require('../src/db');
+const { reindexAll } = require('../src/knowledge');
 
 const PASSWORD = process.env.SEED_PASSWORD || 'password123';
 const DRIVER_PIN = '1234';
@@ -32,23 +38,24 @@ const places = {
   ojota: ['Ojota Bus Stop, Ikorodu Road, Ojota', 6.5856, 3.3784],
 };
 
+// [customer, phone, pickup place, dropoff place, pickup notes, dropoff notes]
 const orders = [
-  ['Chioma Okafor', '08031110001', 'ikejaMall', 'lekki1'],
-  ['Tunde Bakare', '08031110002', 'allen', 'vi'],
-  ['Aisha Bello', '08031110003', 'yaba', 'surulere'],
-  ['Emeka Nwosu', '08031110004', 'maryland', 'ikoyi'],
-  ['Funke Adeyemi', '08031110005', 'ogba', 'magodo'],
-  ['Ibrahim Musa', '08031110006', 'oshodi', 'festac'],
-  ['Ngozi Eze', '08031110007', 'gbagada', 'yaba'],
-  ['Segun Ogunleye', '08031110008', 'vi', 'ajah'],
-  ['Halima Yusuf', '08031110009', 'apapa', 'surulere'],
-  ['Kunle Afolabi', '08031110010', 'ojota', 'allen'],
-  ['Blessing Okon', '08031110011', 'ikoyi', 'lekki1'],
-  ['Yemi Alade', '08031110012', 'festac', 'apapa'],
-  ['Obinna Chukwu', '08031110013', 'magodo', 'ojota'],
-  ['Zainab Ahmed', '08031110014', 'surulere', 'gbagada'],
-  ['Femi Oladipo', '08031110015', 'lekki1', 'ajah'],
-  ['Amaka Obi', '08031110016', 'ikejaMall', 'maryland'],
+  ['Chioma Okafor', '08031110001', 'ikejaMall', 'lekki1', null, 'Black gate opposite the Mobil filling station. Call on arrival.'],
+  ['Tunde Bakare', '08031110002', 'allen', 'vi', 'Ask for Mr Ade at the electronics shop upstairs.', 'Office building: deliver to reception on the ground floor.'],
+  ['Aisha Bello', '08031110003', 'yaba', 'surulere', 'Shop C14 inside the market, ask for Iya Bisi.', 'Collect ₦18,000 on delivery.'],
+  ['Emeka Nwosu', '08031110004', 'maryland', 'ikoyi', null, 'Flat 3, second floor. The doorbell is broken, call 5 minutes before arriving.'],
+  ['Funke Adeyemi', '08031110005', 'ogba', 'magodo', null, 'Magodo estate gate: tell security you are going to House 24, Adekunle Kuye Street.'],
+  ['Ibrahim Musa', '08031110006', 'oshodi', 'festac', null, 'House 4 on 23 Road. Collect ₦7,500. Customer is only home after 4pm.'],
+  ['Ngozi Eze', '08031110007', 'gbagada', 'yaba', 'Birthday cake from Sweet Bites bakery. Keep the box flat.', null],
+  ['Segun Ogunleye', '08031110008', 'vi', 'ajah', null, 'Shop 112 near the main entrance of the market. Park on the Shoprite side.'],
+  ['Halima Yusuf', '08031110009', 'apapa', 'surulere', 'Gate 2 of the port complex: show the waybill to security.', null],
+  ['Kunle Afolabi', '08031110010', 'ojota', 'allen', null, null],
+  ['Blessing Okon', '08031110011', 'ikoyi', 'lekki1', null, 'Gate code 4471. Tell security you are for the Okon family.'],
+  ['Yemi Alade', '08031110012', 'festac', 'apapa', null, null],
+  ['Obinna Chukwu', '08031110013', 'magodo', 'ojota', 'House with the green gate on Jide Oki Street, Phase 2.', null],
+  ['Zainab Ahmed', '08031110014', 'surulere', 'gbagada', null, 'Fragile glass vase. Do not leave it with the gateman.'],
+  ['Femi Oladipo', '08031110015', 'lekki1', 'ajah', null, 'Customer pays by transfer: wait for the dispatcher to confirm payment before handing over.'],
+  ['Amaka Obi', '08031110016', 'ikejaMall', 'maryland', null, null],
 ];
 
 async function main() {
@@ -59,8 +66,25 @@ async function main() {
       throw new Error('Database already has data. Run with --reset to wipe it first.');
     }
     if (reset) {
-      await db.query(`TRUNCATE order_events, stops, routes, orders, drivers, vehicles, users
+      const { rows: settings } = await db.query('SELECT key, value, updated_at FROM app_settings');
+      const { rows: usage } = await db.query(
+        'SELECT feature, model, input_tokens, output_tokens, cache_read_tokens, duration_ms, ok, created_at FROM ai_usage',
+      );
+      await db.query(`TRUNCATE order_events, stops, routes, orders, drivers, vehicles, users,
+                        knowledge_chunks, knowledge_documents, agent_actions, agent_conversations
                       RESTART IDENTITY CASCADE`);
+      // CASCADE emptied these too (they reference users). Put them back
+      // without the user links, which no longer exist.
+      for (const r of settings) {
+        await db.query('INSERT INTO app_settings (key, value, updated_at) VALUES ($1, $2, $3)', [r.key, r.value, r.updated_at]);
+      }
+      for (const u of usage) {
+        await db.query(
+          `INSERT INTO ai_usage (feature, model, input_tokens, output_tokens, cache_read_tokens, duration_ms, ok, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [u.feature, u.model, u.input_tokens, u.output_tokens, u.cache_read_tokens, u.duration_ms, u.ok, u.created_at],
+        );
+      }
     }
 
     const hash = await bcrypt.hash(PASSWORD, 10);
@@ -96,7 +120,7 @@ async function main() {
     }
 
     const stopPairs = [];
-    for (const [name, phone, from, to] of orders) {
+    for (const [name, phone, from, to, pickupNotes, dropoffNotes] of orders) {
       const [pAddr, pLat, pLng] = places[from];
       const [dAddr, dLat, dLng] = places[to];
       const { rows: o } = await db.query(
@@ -108,9 +132,9 @@ async function main() {
         [name, `+234${phone.slice(1)}`, pAddr, pLat, pLng, dAddr, dLat, dLng],
       );
       const { rows: s } = await db.query(
-        `INSERT INTO stops (order_id, stop_type, address, location) VALUES
-         ($1, 'pickup', $2, $3), ($1, 'dropoff', $4, $5) RETURNING id`,
-        [o[0].id, pAddr, o[0].pickup_location, dAddr, o[0].dropoff_location],
+        `INSERT INTO stops (order_id, stop_type, address, location, notes) VALUES
+         ($1, 'pickup', $2, $3, $6), ($1, 'dropoff', $4, $5, $7) RETURNING id`,
+        [o[0].id, pAddr, o[0].pickup_location, dAddr, o[0].dropoff_location, pickupNotes, dropoffNotes],
       );
       await db.query(
         "INSERT INTO order_events (order_id, event_type, actor_type, actor_id) VALUES ($1, 'created', 'user', 2)",
@@ -138,9 +162,27 @@ async function main() {
         [p.orderId],
       );
     }
+
+    // Company SOPs for knowledge search, from scripts/knowledge/*.md. The
+    // first line is the title.
+    const dir = path.join(__dirname, 'knowledge');
+    for (const file of fs.readdirSync(dir).filter((f) => f.endsWith('.md')).sort()) {
+      const text = fs.readFileSync(path.join(dir, file), 'utf8').replace(/\r\n/g, '\n');
+      const [first, ...rest] = text.split('\n');
+      await db.query(
+        'INSERT INTO knowledge_documents (title, body, created_by) VALUES ($1, $2, 1)',
+        [first.replace(/^#\s*/, '').trim(), rest.join('\n').trim()],
+      );
+    }
   });
 
-  console.log('Seeded: 2 staff, 4 vehicles, 5 drivers, %d orders, 1 planned route.', orders.length);
+  console.log('Seeded: 2 staff, 4 vehicles, 5 drivers, %d orders, 1 planned route, SOP documents.', orders.length);
+  try {
+    const r = await reindexAll();
+    console.log('Knowledge indexed: %d chunks from %d documents and %d orders with notes.', r.chunks, r.documents, r.orders_with_notes);
+  } catch (err) {
+    console.warn('Knowledge not indexed (%s). Run POST /knowledge/reindex once service-python is up.', err.message);
+  }
   console.log('Staff password: %s   Driver PIN: %s', PASSWORD, DRIVER_PIN);
 }
 

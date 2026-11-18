@@ -5,6 +5,7 @@ import { AdminLayout } from './layouts/AdminLayout';
 import { StaffAuthProvider } from './lib/auth';
 import { Dashboard } from './pages/Dashboard';
 import { Drivers } from './pages/Drivers';
+import { Knowledge } from './pages/Knowledge';
 import { Login } from './pages/Login';
 import { OrderDetail } from './pages/OrderDetail';
 import { Orders } from './pages/Orders';
@@ -30,6 +31,7 @@ export function App() {
                 <Route path="orders/:id" element={<OrderDetail />} />
                 <Route path="routes" element={<RoutesPage />} />
                 <Route path="routes/:id" element={<RoutePlanner />} />
+                <Route path="knowledge" element={<Knowledge />} />
                 <Route path="drivers" element={<Drivers />} />
                 <Route path="vehicles" element={<Vehicles />} />
                 <Route path="users" element={<Users />} />

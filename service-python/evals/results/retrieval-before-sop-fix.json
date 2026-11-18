@@ -1,0 +1,436 @@
+{
+  "summary": {
+    "cases": 28,
+    "hit@1": 0.893,
+    "hit@3": 0.964,
+    "hit@5": 0.964,
+    "recall@5": 0.964,
+    "mrr": 0.929
+  },
+  "results": [
+    {
+      "id": "cod-screenshot",
+      "question": "The customer sent a screenshot of a transfer. Can the rider release the parcel?",
+      "expect": [
+        "sop:Cash on delivery: Collecting payment"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Cash on delivery: Collecting payment",
+        "Cash on delivery: When the customer cannot pay",
+        "Failed deliveries and returns: Returns from customers"
+      ]
+    },
+    {
+      "id": "cod-part-payment",
+      "question": "Buyer only has part of the money at the door",
+      "expect": [
+        "sop:Cash on delivery: When the customer cannot pay"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Cash on delivery: When the customer cannot pay",
+        "Cash on delivery: Collecting payment",
+        "Failed deliveries and returns: Returns from customers"
+      ]
+    },
+    {
+      "id": "cod-handover",
+      "question": "When must riders submit the cash they collected?",
+      "expect": [
+        "sop:Cash on delivery: Handing over the cash"
+      ],
+      "ranks": [
+        2
+      ],
+      "top": [
+        "Cash on delivery: Collecting payment",
+        "Cash on delivery: Handing over the cash",
+        "Cash on delivery: When the customer cannot pay"
+      ]
+    },
+    {
+      "id": "failed-calls",
+      "question": "How many times should the rider call before giving up on a delivery?",
+      "expect": [
+        "sop:Failed deliveries and returns: Before marking a delivery as failed"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Failed deliveries and returns: Before marking a delivery as failed",
+        "Cash on delivery: When the customer cannot pay",
+        "Failed deliveries and returns: What happens next"
+      ]
+    },
+    {
+      "id": "failed-second-attempt",
+      "question": "Do we charge for a second delivery attempt?",
+      "expect": [
+        "sop:Failed deliveries and returns: What happens next"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Failed deliveries and returns: What happens next",
+        "Failed deliveries and returns: Before marking a delivery as failed",
+        "Cash on delivery: When the customer cannot pay"
+      ]
+    },
+    {
+      "id": "returns-pickup",
+      "question": "A customer is sending an item back to the seller. Where is the pickup?",
+      "expect": [
+        "sop:Failed deliveries and returns: Returns from customers"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Failed deliveries and returns: Returns from customers",
+        "Cash on delivery: When the customer cannot pay",
+        "Failed deliveries and returns: What happens next"
+      ]
+    },
+    {
+      "id": "fragile-weak-box",
+      "question": "The seller's packaging looks too weak for a glass item",
+      "expect": [
+        "sop:Fragile items, food and cakes: Packaging"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Fragile items, food and cakes: Packaging",
+        "Failed deliveries and returns: Returns from customers",
+        "Fragile items, food and cakes: Damaged on the way"
+      ]
+    },
+    {
+      "id": "cake-bike",
+      "question": "Can a birthday cake go on a motorbike?",
+      "expect": [
+        "sop:Fragile items, food and cakes: Cakes and food"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Fragile items, food and cakes: Cakes and food",
+        "Driver note, pickup at Gbagada Phase 2, Gbagada (order #7, Ngozi Eze)",
+        "Fragile items, food and cakes: Packaging"
+      ]
+    },
+    {
+      "id": "damaged-transit",
+      "question": "The item broke on the way. Who pays for it?",
+      "expect": [
+        "sop:Fragile items, food and cakes: Damaged on the way"
+      ],
+      "ranks": [
+        2
+      ],
+      "top": [
+        "Cash on delivery: When the customer cannot pay",
+        "Fragile items, food and cakes: Damaged on the way",
+        "Failed deliveries and returns: Returns from customers"
+      ]
+    },
+    {
+      "id": "estate-security",
+      "question": "What should the rider tell estate security at the gate?",
+      "expect": [
+        "sop:Estates, offices and gated access: Gated estates"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Estates, offices and gated access: Gated estates",
+        "Estates, offices and gated access: Victoria Garden City and Lekki Phase 1",
+        "Rider safety, hours and weather: Safety"
+      ]
+    },
+    {
+      "id": "vgc",
+      "question": "Security procedure at VGC",
+      "expect": [
+        "sop:Estates, offices and gated access: Victoria Garden City and Lekki Phase 1"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Estates, offices and gated access: Victoria Garden City and Lekki Phase 1",
+        "Estates, offices and gated access: Gated estates",
+        "Driver note, dropoff at 12 Admiralty Way, Lekki Phase 1 (order #11, Blessing Okon)"
+      ]
+    },
+    {
+      "id": "office-tower",
+      "question": "Rider is not allowed upstairs in an office building on VI",
+      "expect": [
+        "sop:Estates, offices and gated access: Offices and towers"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Estates, offices and gated access: Offices and towers",
+        "Rider safety, hours and weather: Safety",
+        "Estates, offices and gated access: Gated estates"
+      ]
+    },
+    {
+      "id": "pickup-hours",
+      "question": "What time do pickups stop each day?",
+      "expect": [
+        "sop:Rider safety, hours and weather: Working hours"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Rider safety, hours and weather: Working hours",
+        "Cash on delivery: Handing over the cash",
+        "Failed deliveries and returns: Returns from customers"
+      ]
+    },
+    {
+      "id": "rain-ajah",
+      "question": "Heavy rain and flooding around Ajah. What should riders do?",
+      "expect": [
+        "sop:Rider safety, hours and weather: Rain and flooding"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Rider safety, hours and weather: Rain and flooding",
+        "Rider safety, hours and weather: Safety",
+        "Driver note, dropoff at Ajah Market, Lekki Epe Expressway, Ajah (order #15, Femi Oladipo)"
+      ]
+    },
+    {
+      "id": "passenger",
+      "question": "Can a rider carry a passenger on the bike?",
+      "expect": [
+        "sop:Rider safety, hours and weather: Safety"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Rider safety, hours and weather: Safety",
+        "Cash on delivery: Collecting payment",
+        "Fragile items, food and cakes: Damaged on the way"
+      ]
+    },
+    {
+      "id": "abeokuta",
+      "question": "Do we cover Abeokuta?",
+      "expect": [
+        "sop:Service areas and pricing: Where we deliver"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Service areas and pricing: Where we deliver",
+        "Fragile items, food and cakes: Damaged on the way",
+        "Rider safety, hours and weather: Rain and flooding"
+      ]
+    },
+    {
+      "id": "price-ikeja-lekki",
+      "question": "How much is a delivery from Ikeja to Lekki?",
+      "expect": [
+        "sop:Service areas and pricing: Prices"
+      ],
+      "ranks": [
+        null
+      ],
+      "top": [
+        "Service areas and pricing: Where we deliver",
+        "Driver note, dropoff at 12 Admiralty Way, Lekki Phase 1 (order #11, Blessing Okon)",
+        "Rider safety, hours and weather: Rain and flooding"
+      ]
+    },
+    {
+      "id": "express",
+      "question": "Is there a 3 hour delivery option?",
+      "expect": [
+        "sop:Service areas and pricing: Express"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Service areas and pricing: Express",
+        "Rider safety, hours and weather: Working hours",
+        "Failed deliveries and returns: Before marking a delivery as failed"
+      ]
+    },
+    {
+      "id": "note-gate-code",
+      "question": "Gate code for the Okon family",
+      "expect": [
+        "note:Blessing Okon:dropoff"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Driver note, dropoff at 12 Admiralty Way, Lekki Phase 1 (order #11, Blessing Okon)",
+        "Estates, offices and gated access: Gated estates",
+        "Estates, offices and gated access: Victoria Garden City and Lekki Phase 1"
+      ]
+    },
+    {
+      "id": "note-doorbell",
+      "question": "Which customer has a broken doorbell?",
+      "expect": [
+        "note:Emeka Nwosu:dropoff"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Driver note, dropoff at Awolowo Road, Ikoyi (order #4, Emeka Nwosu)",
+        "Failed deliveries and returns: Returns from customers",
+        "Estates, offices and gated access: Victoria Garden City and Lekki Phase 1"
+      ]
+    },
+    {
+      "id": "note-tejuosho",
+      "question": "Who do I ask for at the Tejuosho market pickup?",
+      "expect": [
+        "note:Aisha Bello:pickup"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Driver note, pickup at Tejuosho Market, Yaba (order #3, Aisha Bello)",
+        "Driver note, pickup at 15 Allen Avenue, Ikeja (order #2, Tunde Bakare)",
+        "Driver note, dropoff at Ajah Market, Lekki Epe Expressway, Ajah (order #8, Segun Ogunleye)"
+      ]
+    },
+    {
+      "id": "note-port",
+      "question": "Port complex pickup: what does security need to see?",
+      "expect": [
+        "note:Halima Yusuf:pickup"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Driver note, pickup at Wharf Road, Apapa (order #9, Halima Yusuf)",
+        "Failed deliveries and returns: Returns from customers",
+        "Estates, offices and gated access: Victoria Garden City and Lekki Phase 1"
+      ]
+    },
+    {
+      "id": "note-after-4pm",
+      "question": "The Festac customer who is only home late in the afternoon",
+      "expect": [
+        "note:Ibrahim Musa:dropoff"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Driver note, dropoff at 23 Road, Festac Town (order #6, Ibrahim Musa)",
+        "Cash on delivery: When the customer cannot pay",
+        "Service areas and pricing: Where we deliver"
+      ]
+    },
+    {
+      "id": "note-ajah-parking",
+      "question": "Where should the rider park at Ajah market?",
+      "expect": [
+        "note:Segun Ogunleye:dropoff"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Driver note, dropoff at Ajah Market, Lekki Epe Expressway, Ajah (order #8, Segun Ogunleye)",
+        "Driver note, dropoff at Ajah Market, Lekki Epe Expressway, Ajah (order #15, Femi Oladipo)",
+        "Rider safety, hours and weather: Rain and flooding"
+      ]
+    },
+    {
+      "id": "note-vase",
+      "question": "Delivery instructions for the glass vase",
+      "expect": [
+        "note:Zainab Ahmed:dropoff"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Driver note, dropoff at Gbagada Phase 2, Gbagada (order #14, Zainab Ahmed)",
+        "Fragile items, food and cakes: Packaging",
+        "Cash on delivery: When the customer cannot pay"
+      ]
+    },
+    {
+      "id": "note-green-gate",
+      "question": "Magodo pickup at the house with the green gate",
+      "expect": [
+        "note:Obinna Chukwu:pickup"
+      ],
+      "ranks": [
+        1
+      ],
+      "top": [
+        "Driver note, pickup at Magodo Phase 2, Shangisha (order #13, Obinna Chukwu)",
+        "Driver note, dropoff at Magodo Phase 2, Shangisha (order #5, Funke Adeyemi)",
+        "Estates, offices and gated access: Gated estates"
+      ]
+    },
+    {
+      "id": "mixed-transfer",
+      "question": "Customer in Ajah pays by transfer. What must the rider do before handing over?",
+      "expect": [
+        "note:Femi Oladipo:dropoff",
+        "sop:Cash on delivery: Collecting payment"
+      ],
+      "ranks": [
+        2,
+        1
+      ],
+      "top": [
+        "Cash on delivery: Collecting payment",
+        "Driver note, dropoff at Ajah Market, Lekki Epe Expressway, Ajah (order #15, Femi Oladipo)",
+        "Cash on delivery: When the customer cannot pay"
+      ]
+    },
+    {
+      "id": "mixed-cake",
+      "question": "Picking up the birthday cake from the Gbagada bakery",
+      "expect": [
+        "note:Ngozi Eze:pickup",
+        "sop:Fragile items, food and cakes: Cakes and food"
+      ],
+      "ranks": [
+        1,
+        2
+      ],
+      "top": [
+        "Driver note, pickup at Gbagada Phase 2, Gbagada (order #7, Ngozi Eze)",
+        "Fragile items, food and cakes: Cakes and food",
+        "Driver note, dropoff at Gbagada Phase 2, Gbagada (order #14, Zainab Ahmed)"
+      ]
+    }
+  ]
+}

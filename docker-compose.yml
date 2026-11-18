@@ -1,6 +1,8 @@
 services:
   postgres:
-    image: postgis/postgis:16-3.4
+    # postgis/postgis:16-3.4 with pgvector added, see db/Dockerfile.
+    build: ./db
+    image: logistics-routing-postgres
     container_name: logistics-postgres
     restart: unless-stopped
     environment:

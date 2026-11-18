@@ -175,3 +175,71 @@ export interface ExtractedDraft {
   model: string;
   usage: { input_tokens: number; output_tokens: number; duration_ms: number };
 }
+
+// ---- Copilot ----
+
+export type ActionStatus = 'proposed' | 'confirmed' | 'rejected' | 'failed';
+
+export interface AgentAction {
+  id: number;
+  conversation_id: number;
+  tool: string;
+  arguments: Record<string, unknown>;
+  summary: string;
+  preview: {
+    driver?: string;
+    route_date?: string;
+    stops?: { n: number; stop_id: number; type: StopType; address: string; order_id: number; customer: string }[];
+    [k: string]: unknown;
+  } | null;
+  status: ActionStatus;
+  result: { message?: string; error?: string; order_id?: number; route_id?: number } | null;
+  created_at: string;
+  decided_at: string | null;
+}
+
+export interface KnowledgeSource {
+  ref: string;
+  title: string;
+  source_type: 'sop' | 'stop_note';
+  source_id: number;
+  order_id: number | null;
+  content: string;
+}
+
+export type CopilotItem =
+  | { type: 'user'; text: string }
+  | { type: 'assistant'; text: string }
+  | { type: 'tool'; id?: string; name: string; label: string; status: 'running' | 'done' | 'error'; detail?: string }
+  | { type: 'proposal'; action_id: number }
+  | { type: 'sources'; items: KnowledgeSource[] }
+  | { type: 'error'; message: string };
+
+export interface Conversation {
+  id: number;
+  title: string | null;
+  display: CopilotItem[];
+  actions: AgentAction[];
+  updated_at: string;
+}
+
+export interface KnowledgeDocument {
+  id: number;
+  title: string;
+  body: string;
+  chunks: number;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KnowledgeHit {
+  id: number;
+  source_type: 'sop' | 'stop_note';
+  source_id: number;
+  title: string;
+  content: string;
+  similarity: number;
+  score: number;
+  order_id: number | null;
+}

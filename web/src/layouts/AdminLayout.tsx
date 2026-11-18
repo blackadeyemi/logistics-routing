@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Icon, type IconName } from '../components/Icon';
 import { Mark, NetStatus, SettingsMenu, useClickOutside } from '../components/ui';
+import { CopilotPanel } from '../copilot/CopilotPanel';
 import { staffApi } from '../lib/api';
 import { useStaffAuth } from '../lib/auth';
 import { configureMaps } from '../lib/maps';
@@ -14,6 +15,7 @@ const OPERATIONS: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: 'dashboard' },
   { to: '/orders', label: 'Orders', icon: 'orders' },
   { to: '/routes', label: 'Routes', icon: 'routes' },
+  { to: '/knowledge', label: 'Knowledge', icon: 'book' },
 ];
 const FLEET: NavItem[] = [
   { to: '/drivers', label: 'Drivers', icon: 'drivers' },
@@ -33,6 +35,7 @@ const TITLES: [RegExp, string][] = [
   [/^\/drivers/, 'Drivers'],
   [/^\/vehicles/, 'Vehicles'],
   [/^\/users/, 'Staff users'],
+  [/^\/knowledge/, 'Knowledge'],
   [/^\/settings/, 'Settings'],
 ];
 
@@ -86,6 +89,7 @@ export function AdminLayout() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(false);
 
   useEffect(() => setMobileOpen(false), [location.pathname]);
 
@@ -156,6 +160,9 @@ export function AdminLayout() {
             <div className="breadcrumb">Dispatch / {title}</div>
           </div>
           <div className="topbar-right">
+            <button type="button" className={`btn btn-ghost btn-sm copilot-toggle${copilotOpen ? ' active' : ''}`} onClick={() => setCopilotOpen((o) => !o)} aria-expanded={copilotOpen}>
+              <Icon name="sparkle" /> <span className="label">Copilot</span>
+            </button>
             <Clock />
             <NetStatus />
             <SettingsMenu />
@@ -166,6 +173,7 @@ export function AdminLayout() {
           <Outlet />
         </main>
       </div>
+      <CopilotPanel open={copilotOpen} onClose={() => setCopilotOpen(false)} />
     </div>
   );
 }

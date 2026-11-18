@@ -38,20 +38,28 @@ alert cards, blue to teal gradient accents. App-specific screens go in
 visual language or a CSS framework.
 
 ## Running locally
-- `docker compose up -d` starts Postgres and api-node (API on
+- `docker compose up -d` starts Postgres (custom image with pgvector, see
+  db/Dockerfile), api-node and service-python (API on
   `API_HOST_PORT`, 3100 on this machine because 3000 is taken).
 - `docker compose exec api-node npm run seed` loads demo Lagos data, add
   `-- --reset` to wipe first. Logins: dispatcher@example.com or
   admin@example.com with password123; drivers 08020000001 to 08020000005
   with PIN 1234.
 - `cd api-node && npm test` runs API tests against throwaway databases.
+- Evals (real model calls, cost money except retrieval):
+  `docker compose exec service-python python -m evals.run_extraction`,
+  `... evals.run_agent` (needs a freshly seeded day) and
+  `... evals.run_retrieval` (free, local embeddings).
 - `cd web && npm run dev` serves the app on http://logistics-routing.test
   (Laragon Apache proxies it to Vite on 5173, see web/README.md) or
   http://localhost:5173.
   `npm run build && npm run preview` tests the real service worker, which
   is off in dev.
 
-## Current phase: Phase 2
+## Current phase: Phase 2 (exit criteria met)
+Phase 2 is complete: WhatsApp intake and the copilot work end to end and
+all three evals are green in the README. Phase 3 starts only when the
+user says so.
 Build only what the current phase lists. Do not start work from a later
 phase until told to move to it. Each phase is done when its exit criteria
 are met.
