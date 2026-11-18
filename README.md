@@ -7,7 +7,7 @@ installable driver app that keeps working when the network drops.
 
 The project is being built in phases, from manual dispatch up to an
 LLM-powered dispatch assistant, route optimization and live tracking.
-**Phase 1, manual dispatch, is working.** Phase 2, the AI layer, is next.
+**Phase 1, manual dispatch, is done**, including a full driver day on a real Android phone with part of it offline. Phase 2, the AI layer, is next.
 
 | Dispatcher dashboard | Driver app (PWA) |
 | --- | --- |
@@ -79,7 +79,7 @@ flowchart LR
 
 | Phase | Scope | Status |
 | --- | --- | --- |
-| 1. Manual dispatch | Auth, CRUD, manual routes, offline driver PWA, Lagos seed data | Done, real-phone test pending |
+| 1. Manual dispatch | Auth, CRUD, manual routes, offline driver PWA, Lagos seed data | Done, tested on a Pixel 7 Pro (install, offline queue, sync) |
 | 2. AI layer | WhatsApp message to validated order (Pydantic structured output), dispatch copilot agent with tool calls and human confirmation of every write, RAG over driver notes and SOPs with pgvector, evals in the repo | Next |
 | 3. Route optimization | OR-Tools vehicle routing with pickup before dropoff, capacity and time windows, compared against the manual plan | Planned |
 | 4. Live tracking | Driver location, WebSocket updates, live map, ETAs, customer SMS tracking link | Planned |
