@@ -8,6 +8,7 @@ import { fmtDateTime } from '../lib/format';
 import { configureMaps, loadedMapsKey } from '../lib/maps';
 import type { AppSettings } from '../lib/types';
 import { useLoad } from '../lib/useLoad';
+import { AiSettings } from './AiSettings';
 
 const ENV_KEY = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined)?.trim() ?? '';
 
@@ -49,7 +50,12 @@ export function Settings() {
         <div><h1>Settings</h1><p>Connections and options for the whole company.</p></div>
       </div>
       <ErrorAlert error={error} />
-      {loading && !data ? <div className="card"><SkeletonRows rows={4} /></div> : data && <MapsSettings settings={data} onSaved={reload} />}
+      {loading && !data ? <div className="card"><SkeletonRows rows={4} /></div> : data && (
+        <div className="settings-stack">
+          <AiSettings settings={data} onSaved={reload} />
+          <MapsSettings settings={data} onSaved={reload} />
+        </div>
+      )}
     </>
   );
 }

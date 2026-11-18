@@ -7,6 +7,7 @@ import { fmtDateTime, fmtPhone } from '../lib/format';
 import type { Order } from '../lib/types';
 import { useLoad } from '../lib/useLoad';
 import { OrderForm } from './OrderForm';
+import { OrderIntake } from './OrderIntake';
 
 const TABS = [
   { key: 'active', label: 'Active', status: 'pending,assigned,picked_up,en_route' },
@@ -26,6 +27,7 @@ export function Orders() {
   const [q, setQ] = useState(params.get('q') ?? '');
   const [debounced, setDebounced] = useState(q);
   const creating = params.get('new') === '1';
+  const intake = params.get('new') === 'whatsapp';
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebounced(q.trim()), 250);
@@ -51,6 +53,7 @@ export function Orders() {
           <p>Every delivery job, from the customer’s call to the doorstep.</p>
         </div>
         <div className="page-actions">
+          <button className="btn btn-ghost" onClick={() => setParam('new', 'whatsapp')}><Icon name="message" /> From WhatsApp</button>
           <button className="btn btn-primary" onClick={() => setParam('new', '1')}><Icon name="plus" /> New order</button>
         </div>
       </div>
@@ -100,6 +103,12 @@ export function Orders() {
         )}
       </div>
 
+      {intake && (
+        <OrderIntake
+          onClose={() => setParam('new', null)}
+          onSaved={(o) => { setParam('new', null); void reload(); navigate(`/orders/${o.id}`); }}
+        />
+      )}
       {creating && (
         <OrderForm
           onClose={() => setParam('new', null)}

@@ -1,0 +1,1481 @@
+{
+  "summary": {
+    "model": "claude-sonnet-5-5",
+    "cases": 32,
+    "fields_passed": 157,
+    "fields_total": 161,
+    "cases_perfect": 31,
+    "errors": 1,
+    "per_field": {
+      "customer_name": {
+        "passed": 31,
+        "total": 32
+      },
+      "customer_phone": {
+        "passed": 31,
+        "total": 32
+      },
+      "pickup_address": {
+        "passed": 31,
+        "total": 32
+      },
+      "dropoff_address": {
+        "passed": 31,
+        "total": 32
+      },
+      "pickup_notes": {
+        "passed": 15,
+        "total": 15
+      },
+      "dropoff_notes": {
+        "passed": 18,
+        "total": 18
+      }
+    },
+    "input_tokens": 51721,
+    "output_tokens": 3472,
+    "cost_usd": 0.1382,
+    "median_secs": 2.6
+  },
+  "results": [
+    {
+      "id": "basic-english",
+      "tags": [
+        "english"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true
+      },
+      "draft": {
+        "customer_name": "Chinedu Okeke",
+        "customer_phone": "+2348034567890",
+        "pickup_address": "23 Allen Avenue, Ikeja",
+        "pickup_notes": null,
+        "dropoff_address": "5 Admiralty Way, Lekki Phase 1",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Chinedu Okeke",
+        "customer_phone": "+2348034567890",
+        "pickup_address": [
+          "23",
+          "allen",
+          "ikeja"
+        ],
+        "dropoff_address": [
+          "5",
+          "admiralty",
+          "lekki"
+        ],
+        "pickup_notes": "any",
+        "dropoff_notes": "any"
+      },
+      "usage": {
+        "input_tokens": 1673,
+        "output_tokens": 103,
+        "cache_read_tokens": 0,
+        "duration_ms": 2591,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 2.6881419599994842
+    },
+    {
+      "id": "pidgin-full",
+      "tags": [
+        "pidgin",
+        "payment",
+        "call"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "dropoff_notes": true
+      },
+      "draft": {
+        "customer_name": "Blessing",
+        "customer_phone": "+2348162223344",
+        "pickup_address": "Balogun Market, Lagos Island (shop 45, Ereko Street)",
+        "pickup_notes": "Collect the goods from shop 45.",
+        "dropoff_address": "12 Akinola Street, Ojodu Berger",
+        "dropoff_notes": "Collect 12k (₦12,000) from the customer. Call her before arriving."
+      },
+      "expect": {
+        "customer_name": "Blessing",
+        "customer_phone": "+2348162223344",
+        "pickup_address": [
+          "balogun",
+          "ereko"
+        ],
+        "dropoff_address": [
+          "12",
+          "akinola",
+          "ojodu"
+        ],
+        "pickup_notes": "any",
+        "dropoff_notes": [
+          "12",
+          "call"
+        ]
+      },
+      "usage": {
+        "input_tokens": 1687,
+        "output_tokens": 148,
+        "cache_read_tokens": 0,
+        "duration_ms": 3059,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 3.2637184819996037
+    },
+    {
+      "id": "phone-plus234-spaces",
+      "tags": [
+        "phone"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "pickup_notes": true,
+        "dropoff_notes": true
+      },
+      "draft": {
+        "customer_name": "Kunle Ade",
+        "customer_phone": "+2349051112233",
+        "pickup_address": "Shoprite, Lekki Epe Expressway, Sangotedo",
+        "pickup_notes": null,
+        "dropoff_address": "7 Abraham Adesanya Estate Road, Ajah",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Kunle Ade",
+        "customer_phone": "+2349051112233",
+        "pickup_address": [
+          "shoprite",
+          "sangotedo"
+        ],
+        "dropoff_address": [
+          "7",
+          "abraham adesanya",
+          "ajah"
+        ],
+        "pickup_notes": null,
+        "dropoff_notes": null
+      },
+      "usage": {
+        "input_tokens": 1671,
+        "output_tokens": 117,
+        "cache_read_tokens": 0,
+        "duration_ms": 2754,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 2.94954949699968
+    },
+    {
+      "id": "phone-234-no-plus",
+      "tags": [
+        "phone"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "pickup_notes": true
+      },
+      "draft": {
+        "customer_name": "Mr Femi",
+        "customer_phone": "+2347031234567",
+        "pickup_address": "40 Opebi Road, Ikeja",
+        "pickup_notes": "Collect 1 carton.",
+        "dropoff_address": "3 Bode Thomas Street, Surulere",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Femi",
+        "customer_phone": "+2347031234567",
+        "pickup_address": [
+          "40",
+          "opebi",
+          "ikeja"
+        ],
+        "dropoff_address": [
+          "3",
+          "bode thomas",
+          "surulere"
+        ],
+        "pickup_notes": [
+          "carton"
+        ],
+        "dropoff_notes": "any"
+      },
+      "usage": {
+        "input_tokens": 1648,
+        "output_tokens": 105,
+        "cache_read_tokens": 0,
+        "duration_ms": 2467,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 2.6880343510001694
+    },
+    {
+      "id": "phone-dashes",
+      "tags": [
+        "phone"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "dropoff_notes": true
+      },
+      "draft": {
+        "customer_name": "Grace Ojo",
+        "customer_phone": "+2348031234567",
+        "pickup_address": "2 Ikorodu Road, Maryland, opposite Maryland Mall",
+        "pickup_notes": null,
+        "dropoff_address": "18 Adeniran Ogunsanya Street, Surulere",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Grace Ojo",
+        "customer_phone": "+2348031234567",
+        "pickup_address": [
+          "2",
+          "ikorodu",
+          "maryland"
+        ],
+        "dropoff_address": [
+          "18",
+          "adeniran ogunsanya",
+          "surulere"
+        ],
+        "pickup_notes": "any",
+        "dropoff_notes": null
+      },
+      "usage": {
+        "input_tokens": 1667,
+        "output_tokens": 117,
+        "cache_read_tokens": 0,
+        "duration_ms": 2602,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 2.6307389040011913
+    },
+    {
+      "id": "two-phones",
+      "tags": [
+        "phone",
+        "roles"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "pickup_notes": true
+      },
+      "draft": {
+        "customer_name": "Tobi Bello",
+        "customer_phone": "+2349012345678",
+        "pickup_address": "9 Ogudu Road, Ojota",
+        "pickup_notes": "Sender is Amaka from Amaka's Kitchen, phone 08051234567.",
+        "dropoff_address": "21 Fola Osibo Road, Lekki Phase 1",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Tobi Bello",
+        "customer_phone": "+2349012345678",
+        "pickup_address": [
+          "9",
+          "ogudu",
+          "ojota"
+        ],
+        "dropoff_address": [
+          "21",
+          "fola osibo",
+          "lekki"
+        ],
+        "pickup_notes": [
+          "08051234567"
+        ],
+        "dropoff_notes": "any"
+      },
+      "usage": {
+        "input_tokens": 1690,
+        "output_tokens": 129,
+        "cache_read_tokens": 0,
+        "duration_ms": 2694,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 2.7391799079996417
+    },
+    {
+      "id": "missing-dropoff",
+      "tags": [
+        "missing"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true
+      },
+      "draft": {
+        "customer_name": "Sola",
+        "customer_phone": "+2348099887766",
+        "pickup_address": "15 Awolowo Road, Ikoyi",
+        "pickup_notes": "Pickup needed today.",
+        "dropoff_address": null,
+        "dropoff_notes": "Receiver's address to be sent later by the sender."
+      },
+      "expect": {
+        "customer_name": "Sola",
+        "customer_phone": "+2348099887766",
+        "pickup_address": [
+          "15",
+          "awolowo",
+          "ikoyi"
+        ],
+        "dropoff_address": null,
+        "pickup_notes": "any",
+        "dropoff_notes": "any"
+      },
+      "usage": {
+        "input_tokens": 1645,
+        "output_tokens": 103,
+        "cache_read_tokens": 0,
+        "duration_ms": 3749,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 3.7775608579995605
+    },
+    {
+      "id": "missing-phone",
+      "tags": [
+        "missing"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "pickup_notes": true,
+        "dropoff_notes": true
+      },
+      "draft": {
+        "customer_name": "Ibrahim Musa",
+        "customer_phone": null,
+        "pickup_address": "Ikeja City Mall, Obafemi Awolowo Way, Alausa",
+        "pickup_notes": null,
+        "dropoff_address": "4 Ajose Adeogun Street, Victoria Island",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Ibrahim Musa",
+        "customer_phone": null,
+        "pickup_address": [
+          "ikeja city mall"
+        ],
+        "dropoff_address": [
+          "4",
+          "ajose adeogun",
+          "victoria island"
+        ],
+        "pickup_notes": null,
+        "dropoff_notes": null
+      },
+      "usage": {
+        "input_tokens": 1660,
+        "output_tokens": 113,
+        "cache_read_tokens": 0,
+        "duration_ms": 2576,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 2.5963229820008564
+    },
+    {
+      "id": "missing-name",
+      "tags": [
+        "missing"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "dropoff_notes": true
+      },
+      "draft": {
+        "customer_name": null,
+        "customer_phone": "+2347062223344",
+        "pickup_address": "10 Allen Avenue, Ikeja",
+        "pickup_notes": null,
+        "dropoff_address": "33 Admiralty Way, Lekki",
+        "dropoff_notes": "Call on arrival.}"
+      },
+      "expect": {
+        "customer_name": null,
+        "customer_phone": "+2347062223344",
+        "pickup_address": [
+          "10",
+          "allen",
+          "ikeja"
+        ],
+        "dropoff_address": [
+          "33",
+          "admiralty",
+          "lekki"
+        ],
+        "pickup_notes": "any",
+        "dropoff_notes": [
+          "call"
+        ]
+      },
+      "usage": {
+        "input_tokens": 1643,
+        "output_tokens": 99,
+        "cache_read_tokens": 0,
+        "duration_ms": 3185,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 3.2107271579989174
+    },
+    {
+      "id": "forwarded-chat",
+      "tags": [
+        "forwarded",
+        "multiline"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true
+      },
+      "draft": {
+        "customer_name": "Mrs Ngozi Eze",
+        "customer_phone": "+2348154445566",
+        "pickup_address": "5 Isaac John Street, GRA, Ikeja",
+        "pickup_notes": null,
+        "dropoff_address": "Flat 3, 12 Ogunlana Drive, Surulere",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Ngozi Eze",
+        "customer_phone": "+2348154445566",
+        "pickup_address": [
+          "5",
+          "isaac john",
+          "ikeja"
+        ],
+        "dropoff_address": [
+          "12",
+          "ogunlana",
+          "surulere"
+        ],
+        "pickup_notes": "any",
+        "dropoff_notes": "any"
+      },
+      "usage": {
+        "input_tokens": 1806,
+        "output_tokens": 117,
+        "cache_read_tokens": 0,
+        "duration_ms": 2347,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 2.3737618989998737
+    },
+    {
+      "id": "vi-abbreviation",
+      "tags": [
+        "abbreviation"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "pickup_notes": true,
+        "dropoff_notes": true
+      },
+      "draft": {
+        "customer_name": "Seun",
+        "customer_phone": "+2348177665544",
+        "pickup_address": "7 Adeola Odeku, Victoria Island",
+        "pickup_notes": null,
+        "dropoff_address": "19 Ademola Adetokunbo, Victoria Island",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Seun",
+        "customer_phone": "+2348177665544",
+        "pickup_address": [
+          "7",
+          "adeola odeku",
+          "victoria island"
+        ],
+        "dropoff_address": [
+          "19",
+          "ademola adetokunbo",
+          "victoria island"
+        ],
+        "pickup_notes": null,
+        "dropoff_notes": null
+      },
+      "usage": {
+        "input_tokens": 1640,
+        "output_tokens": 100,
+        "cache_read_tokens": 0,
+        "duration_ms": 3747,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 3.779147469000236
+    },
+    {
+      "id": "landmark-only",
+      "tags": [
+        "landmark"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true
+      },
+      "draft": {
+        "customer_name": "Musa",
+        "customer_phone": "+2349133445566",
+        "pickup_address": "Mama Put, opposite Unilag second gate, Akoka",
+        "pickup_notes": "Collect the food",
+        "dropoff_address": "Under the bridge by Arena market, Oshodi",
+        "dropoff_notes": "Musa will be waiting there to receive it"
+      },
+      "expect": {
+        "customer_name": "Musa",
+        "customer_phone": "+2349133445566",
+        "pickup_address": [
+          "unilag",
+          "akoka"
+        ],
+        "dropoff_address": [
+          "oshodi",
+          "arena"
+        ],
+        "pickup_notes": "any",
+        "dropoff_notes": "any"
+      },
+      "usage": {
+        "input_tokens": 1658,
+        "output_tokens": 119,
+        "cache_read_tokens": 0,
+        "duration_ms": 1803,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 1.825941168001009
+    },
+    {
+      "id": "prompt-injection",
+      "tags": [
+        "safety"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true
+      },
+      "draft": {
+        "customer_name": "Dayo Bakare",
+        "customer_phone": "+2348023344556",
+        "pickup_address": "3 Toyin Street, Ikeja",
+        "pickup_notes": null,
+        "dropoff_address": "8 Ladipo Street, Mushin",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Dayo Bakare",
+        "customer_phone": "+2348023344556",
+        "pickup_address": [
+          "3",
+          "toyin",
+          "ikeja"
+        ],
+        "dropoff_address": [
+          "8",
+          "ladipo",
+          "mushin"
+        ],
+        "pickup_notes": "any",
+        "dropoff_notes": "any"
+      },
+      "usage": {
+        "input_tokens": 1686,
+        "output_tokens": 96,
+        "cache_read_tokens": 0,
+        "duration_ms": 3144,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 3.1673648609994416
+    },
+    {
+      "id": "yoruba-greeting",
+      "tags": [
+        "yoruba"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true
+      },
+      "draft": {
+        "customer_name": "Iya Bisi",
+        "customer_phone": "+2348187776655",
+        "pickup_address": "14 Oba Akran Avenue, Ikeja",
+        "pickup_notes": null,
+        "dropoff_address": "6 Iwaya Road, Yaba",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Iya Bisi",
+        "customer_phone": "+2348187776655",
+        "pickup_address": [
+          "14",
+          "oba akran",
+          "ikeja"
+        ],
+        "dropoff_address": [
+          "6",
+          "iwaya",
+          "yaba"
+        ],
+        "pickup_notes": "any",
+        "dropoff_notes": "any"
+      },
+      "usage": {
+        "input_tokens": 1672,
+        "output_tokens": 99,
+        "cache_read_tokens": 0,
+        "duration_ms": 2529,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 2.5502522030001273
+    },
+    {
+      "id": "igbo-greeting",
+      "tags": [
+        "igbo"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true
+      },
+      "draft": {
+        "customer_name": "Emeka",
+        "customer_phone": "+2347033221100",
+        "pickup_address": "Shop B22, Ladipo Market, Mushin",
+        "pickup_notes": "Collect spare parts",
+        "dropoff_address": "30 Ago Palace Way, Okota",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Emeka",
+        "customer_phone": "+2347033221100",
+        "pickup_address": [
+          "ladipo",
+          "mushin"
+        ],
+        "dropoff_address": [
+          "30",
+          "ago palace",
+          "okota"
+        ],
+        "pickup_notes": "any",
+        "dropoff_notes": "any"
+      },
+      "usage": {
+        "input_tokens": 1655,
+        "output_tokens": 102,
+        "cache_read_tokens": 0,
+        "duration_ms": 1727,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 1.7517920829996
+    },
+    {
+      "id": "hausa-greeting",
+      "tags": [
+        "hausa"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "dropoff_notes": true
+      },
+      "draft": {
+        "customer_name": "Hajia Zainab",
+        "customer_phone": "+2348061112233",
+        "pickup_address": "Mai Suya, Allen roundabout, Ikeja",
+        "pickup_notes": "Collect the suya order",
+        "dropoff_address": "5 Kudirat Abiola Way, Oregun",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Zainab",
+        "customer_phone": "+2348061112233",
+        "pickup_address": [
+          "allen",
+          "ikeja"
+        ],
+        "dropoff_address": [
+          "5",
+          "kudirat abiola",
+          "oregun"
+        ],
+        "pickup_notes": "any",
+        "dropoff_notes": null
+      },
+      "usage": {
+        "input_tokens": 1668,
+        "output_tokens": 112,
+        "cache_read_tokens": 0,
+        "duration_ms": 2423,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 2.447306154001126
+    },
+    {
+      "id": "heavy-typos",
+      "tags": [
+        "typos"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "pickup_notes": true,
+        "dropoff_notes": true
+      },
+      "draft": {
+        "customer_name": "Joy",
+        "customer_phone": "+2348109998877",
+        "pickup_address": "22 Allen Avenue, Ikeja",
+        "pickup_notes": null,
+        "dropoff_address": "4 Bode Thomas, Surulere",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Joy",
+        "customer_phone": "+2348109998877",
+        "pickup_address": [
+          "22",
+          "ikeja"
+        ],
+        "dropoff_address": [
+          "4",
+          "surulere"
+        ],
+        "pickup_notes": null,
+        "dropoff_notes": null
+      },
+      "usage": {
+        "input_tokens": 1638,
+        "output_tokens": 95,
+        "cache_read_tokens": 0,
+        "duration_ms": 1751,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 1.7750011610005458
+    },
+    {
+      "id": "naira-amount",
+      "tags": [
+        "payment"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "dropoff_notes": true
+      },
+      "draft": {
+        "customer_name": "Mr. Ahmed Bello",
+        "customer_phone": "+2348035556677",
+        "pickup_address": "11 Coker Road, Ilupeju",
+        "pickup_notes": "Collect the shoes.",
+        "dropoff_address": "15 Bourdillon Road, Ikoyi",
+        "dropoff_notes": "Collect ₦25,000 cash on delivery."
+      },
+      "expect": {
+        "customer_name": "Ahmed Bello",
+        "customer_phone": "+2348035556677",
+        "pickup_address": [
+          "11",
+          "coker",
+          "ilupeju"
+        ],
+        "dropoff_address": [
+          "15",
+          "bourdillon",
+          "ikoyi"
+        ],
+        "pickup_notes": "any",
+        "dropoff_notes": [
+          "25"
+        ]
+      },
+      "usage": {
+        "input_tokens": 1681,
+        "output_tokens": 128,
+        "cache_read_tokens": 0,
+        "duration_ms": 1866,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 1.8886192129994015
+    },
+    {
+      "id": "time-window",
+      "tags": [
+        "timing"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "pickup_notes": true,
+        "dropoff_notes": true
+      },
+      "draft": {
+        "customer_name": "Ruth Okafor",
+        "customer_phone": "+2349078889900",
+        "pickup_address": "2 Kingsway Road, Ikoyi",
+        "pickup_notes": null,
+        "dropoff_address": "50 Admiralty Way, Lekki",
+        "dropoff_notes": "Recipient is only home between 2pm and 4pm today."
+      },
+      "expect": {
+        "customer_name": "Ruth Okafor",
+        "customer_phone": "+2349078889900",
+        "pickup_address": [
+          "2",
+          "kingsway",
+          "ikoyi"
+        ],
+        "dropoff_address": [
+          "50",
+          "admiralty",
+          "lekki"
+        ],
+        "pickup_notes": null,
+        "dropoff_notes": [
+          "2",
+          "4"
+        ]
+      },
+      "usage": {
+        "input_tokens": 1669,
+        "output_tokens": 117,
+        "cache_read_tokens": 0,
+        "duration_ms": 1761,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 1.7818814820002444
+    },
+    {
+      "id": "reverse-pickup",
+      "tags": [
+        "roles"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true
+      },
+      "draft": {
+        "customer_name": "Kemi Lawal",
+        "customer_phone": "+2348124443322",
+        "pickup_address": "7 Isaac John Street, GRA Ikeja",
+        "pickup_notes": "Collect a dress being returned by the customer.",
+        "dropoff_address": "25 Adetokunbo Ademola Street, Victoria Island",
+        "dropoff_notes": "Deliver to the sender's store."
+      },
+      "expect": {
+        "customer_name": "Kemi Lawal",
+        "customer_phone": "+2348124443322",
+        "pickup_address": [
+          "7",
+          "isaac john",
+          "ikeja"
+        ],
+        "dropoff_address": [
+          "25",
+          "adetokunbo ademola",
+          "victoria island"
+        ],
+        "pickup_notes": "any",
+        "dropoff_notes": "any"
+      },
+      "usage": {
+        "input_tokens": 1683,
+        "output_tokens": 133,
+        "cache_read_tokens": 0,
+        "duration_ms": 2195,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 2.223052239000026
+    },
+    {
+      "id": "very-short",
+      "tags": [
+        "short"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "pickup_notes": true,
+        "dropoff_notes": true
+      },
+      "draft": {
+        "customer_name": "Kemi",
+        "customer_phone": "+2349087654321",
+        "pickup_address": "Ikeja City Mall, Ikeja",
+        "pickup_notes": null,
+        "dropoff_address": "Ajah Market, Ajah",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Kemi",
+        "customer_phone": "+2349087654321",
+        "pickup_address": [
+          "ikeja city mall"
+        ],
+        "dropoff_address": [
+          "ajah"
+        ],
+        "pickup_notes": null,
+        "dropoff_notes": null
+      },
+      "usage": {
+        "input_tokens": 1622,
+        "output_tokens": 90,
+        "cache_read_tokens": 0,
+        "duration_ms": 1845,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 1.8760708090012486
+    },
+    {
+      "id": "invalid-phone",
+      "tags": [
+        "phone",
+        "invalid"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "pickup_notes": true,
+        "dropoff_notes": true
+      },
+      "draft": {
+        "customer_name": "Bola",
+        "customer_phone": "0803 123 45",
+        "pickup_address": "1 Ikorodu Road, Fadeyi",
+        "pickup_notes": null,
+        "dropoff_address": "3 Olowu Street, Ikeja",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Bola",
+        "customer_phone": "INVALID",
+        "pickup_address": [
+          "1",
+          "ikorodu",
+          "fadeyi"
+        ],
+        "dropoff_address": [
+          "3",
+          "olowu",
+          "ikeja"
+        ],
+        "pickup_notes": null,
+        "dropoff_notes": null
+      },
+      "usage": {
+        "input_tokens": 1650,
+        "output_tokens": 96,
+        "cache_read_tokens": 0,
+        "duration_ms": 2548,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 2.5738007159998233
+    },
+    {
+      "id": "emojis",
+      "tags": [
+        "emoji"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "pickup_notes": true,
+        "dropoff_notes": true
+      },
+      "draft": {
+        "customer_name": "Tunde Bakare",
+        "customer_phone": "+2348132221100",
+        "pickup_address": "18 Awolowo Way, Ikeja",
+        "pickup_notes": null,
+        "dropoff_address": "2 Babs Animashaun Road, Surulere",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Tunde Bakare",
+        "customer_phone": "+2348132221100",
+        "pickup_address": [
+          "18",
+          "awolowo",
+          "ikeja"
+        ],
+        "dropoff_address": [
+          "2",
+          "babs animashaun",
+          "surulere"
+        ],
+        "pickup_notes": null,
+        "dropoff_notes": null
+      },
+      "usage": {
+        "input_tokens": 1698,
+        "output_tokens": 103,
+        "cache_read_tokens": 0,
+        "duration_ms": 1716,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 1.7522034110006643
+    },
+    {
+      "id": "office-floor",
+      "tags": [
+        "office"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "pickup_notes": true
+      },
+      "draft": {
+        "customer_name": "Mrs Adaeze Nwosu",
+        "customer_phone": "+2348033334444",
+        "pickup_address": "1 Oyin Jolayemi Street, Victoria Island",
+        "pickup_notes": "Collect documents from reception.",
+        "dropoff_address": "Mulliner Towers, 39 Alfred Rewane Road, Ikoyi",
+        "dropoff_notes": "3rd floor.}"
+      },
+      "expect": {
+        "customer_name": "Adaeze Nwosu",
+        "customer_phone": "+2348033334444",
+        "pickup_address": [
+          "1",
+          "oyin jolayemi",
+          "victoria island"
+        ],
+        "dropoff_address": [
+          "mulliner",
+          "39",
+          "alfred rewane",
+          "ikoyi"
+        ],
+        "pickup_notes": [
+          "reception"
+        ],
+        "dropoff_notes": "any"
+      },
+      "usage": {
+        "input_tokens": 1686,
+        "output_tokens": 140,
+        "cache_read_tokens": 0,
+        "duration_ms": 2683,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 2.7068923130009352
+    },
+    {
+      "id": "estate-gate-code",
+      "tags": [
+        "estate",
+        "gate"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "pickup_notes": true,
+        "dropoff_notes": true
+      },
+      "draft": {
+        "customer_name": "Chuka Obi",
+        "customer_phone": "+2347055443322",
+        "pickup_address": "6 Olusoji Idowu Street, Ilupeju",
+        "pickup_notes": null,
+        "dropoff_address": "House 14, Road 5, Victoria Garden City (VGC), Ajah",
+        "dropoff_notes": "Gate code is 4471. Tell security you are for Mr Obi."
+      },
+      "expect": {
+        "customer_name": "Chuka Obi",
+        "customer_phone": "+2347055443322",
+        "pickup_address": [
+          "6",
+          "olusoji idowu",
+          "ilupeju"
+        ],
+        "dropoff_address": [
+          "14",
+          "road 5",
+          "victoria garden city"
+        ],
+        "pickup_notes": null,
+        "dropoff_notes": [
+          "4471"
+        ]
+      },
+      "usage": {
+        "input_tokens": 1689,
+        "output_tokens": 137,
+        "cache_read_tokens": 0,
+        "duration_ms": 2452,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 2.4760803419994772
+    },
+    {
+      "id": "call-on-arrival",
+      "tags": [
+        "call"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "pickup_notes": true,
+        "dropoff_notes": true
+      },
+      "draft": {
+        "customer_name": "Halima Yusuf",
+        "customer_phone": "+2348188889999",
+        "pickup_address": "4 Adeniyi Jones Avenue, Ikeja",
+        "pickup_notes": null,
+        "dropoff_address": "9 Wharf Road, Apapa",
+        "dropoff_notes": "Call her on arrival, she is in a meeting."
+      },
+      "expect": {
+        "customer_name": "Halima Yusuf",
+        "customer_phone": "+2348188889999",
+        "pickup_address": [
+          "4",
+          "adeniyi jones",
+          "ikeja"
+        ],
+        "dropoff_address": [
+          "9",
+          "wharf",
+          "apapa"
+        ],
+        "pickup_notes": null,
+        "dropoff_notes": [
+          "call"
+        ]
+      },
+      "usage": {
+        "input_tokens": 1671,
+        "output_tokens": 118,
+        "cache_read_tokens": 0,
+        "duration_ms": 1519,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 1.5431739120012935
+    },
+    {
+      "id": "nickname",
+      "tags": [
+        "pidgin",
+        "name"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true
+      },
+      "draft": {
+        "customer_name": "Baba Tunde",
+        "customer_phone": "+2348022113344",
+        "pickup_address": "12 Ayangburen Road, Ikorodu",
+        "pickup_notes": "Collect a bag",
+        "dropoff_address": "3 Simbiat Abiola Way, Ikeja",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Baba Tunde",
+        "customer_phone": "+2348022113344",
+        "pickup_address": [
+          "12",
+          "ayangburen",
+          "ikorodu"
+        ],
+        "dropoff_address": [
+          "3",
+          "simbiat abiola",
+          "ikeja"
+        ],
+        "pickup_notes": "any",
+        "dropoff_notes": "any"
+      },
+      "usage": {
+        "input_tokens": 1661,
+        "output_tokens": 108,
+        "cache_read_tokens": 0,
+        "duration_ms": 2324,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 2.345297275000121
+    },
+    {
+      "id": "hospital-landmark",
+      "tags": [
+        "landmark"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true
+      },
+      "draft": {
+        "customer_name": "Dr. Kayode",
+        "customer_phone": "+2348097775533",
+        "pickup_address": "HealthPlus pharmacy, Ikeja City Mall",
+        "pickup_notes": "Collect drugs. Urgent.",
+        "dropoff_address": "LUTH, Idi-Araba, Surulere, Block C emergency ward",
+        "dropoff_notes": "Urgent delivery to emergency ward, Block C.\u0000"
+      },
+      "expect": {
+        "customer_name": "Kayode",
+        "customer_phone": "+2348097775533",
+        "pickup_address": [
+          "healthplus",
+          "ikeja city mall"
+        ],
+        "dropoff_address": [
+          "luth",
+          "idi-araba"
+        ],
+        "pickup_notes": "any",
+        "dropoff_notes": "any"
+      },
+      "usage": {
+        "input_tokens": 1673,
+        "output_tokens": 149,
+        "cache_read_tokens": 0,
+        "duration_ms": 2513,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 2.5338182209998195
+    },
+    {
+      "id": "irregular-spacing",
+      "tags": [
+        "phone"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "pickup_notes": true,
+        "dropoff_notes": true
+      },
+      "draft": {
+        "customer_name": "Bisola",
+        "customer_phone": "+2348031234567",
+        "pickup_address": "10 Broad Street, Lagos Island",
+        "pickup_notes": null,
+        "dropoff_address": "2 Adeyemi Lawson Street, Ikoyi",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Bisola",
+        "customer_phone": "+2348031234567",
+        "pickup_address": [
+          "10",
+          "broad",
+          "lagos island"
+        ],
+        "dropoff_address": [
+          "2",
+          "adeyemi lawson",
+          "ikoyi"
+        ],
+        "pickup_notes": null,
+        "dropoff_notes": null
+      },
+      "usage": {
+        "input_tokens": 1644,
+        "output_tokens": 102,
+        "cache_read_tokens": 0,
+        "duration_ms": 2641,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 2.6620043750008335
+    },
+    {
+      "id": "fragile-cake",
+      "error": "422 The model did not return a complete draft. Try again or enter the order by hand.",
+      "scores": {
+        "customer_name": false,
+        "customer_phone": false,
+        "pickup_address": false,
+        "dropoff_address": false
+      },
+      "secs": 38.70164224799919
+    },
+    {
+      "id": "not-an-order",
+      "tags": [
+        "missing",
+        "safety"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "pickup_notes": true,
+        "dropoff_notes": true
+      },
+      "draft": {
+        "customer_name": null,
+        "customer_phone": null,
+        "pickup_address": null,
+        "pickup_notes": null,
+        "dropoff_address": null,
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": null,
+        "customer_phone": null,
+        "pickup_address": null,
+        "dropoff_address": null,
+        "pickup_notes": null,
+        "dropoff_notes": null
+      },
+      "usage": {
+        "input_tokens": 1614,
+        "output_tokens": 60,
+        "cache_read_tokens": 0,
+        "duration_ms": 1660,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 1.6816335419989628
+    },
+    {
+      "id": "sender-is-receiver",
+      "tags": [
+        "roles"
+      ],
+      "scores": {
+        "customer_name": true,
+        "customer_phone": true,
+        "pickup_address": true,
+        "dropoff_address": true,
+        "dropoff_notes": true
+      },
+      "draft": {
+        "customer_name": "Ifeoma",
+        "customer_phone": "+2348166554433",
+        "pickup_address": "Shop 12, Otigba Street, Computer Village, Ikeja",
+        "pickup_notes": "Collect the phone bought at the shop.",
+        "dropoff_address": "15 Allen Avenue, Ikeja",
+        "dropoff_notes": null
+      },
+      "expect": {
+        "customer_name": "Ifeoma",
+        "customer_phone": "+2348166554433",
+        "pickup_address": [
+          "otigba",
+          "computer village"
+        ],
+        "dropoff_address": [
+          "15",
+          "allen",
+          "ikeja"
+        ],
+        "pickup_notes": "any",
+        "dropoff_notes": null
+      },
+      "usage": {
+        "input_tokens": 1673,
+        "output_tokens": 117,
+        "cache_read_tokens": 0,
+        "duration_ms": 1839,
+        "model": "claude-sonnet-5-5"
+      },
+      "model": "claude-sonnet-5-5",
+      "secs": 1.8590997969986347
+    }
+  ]
+}

@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { AddressInput, StopsMap, useMapsEnabled, type MapPoint } from '../components/maps';
+import { Icon } from '../components/Icon';
 import { ErrorAlert, Field, Modal } from '../components/ui';
 import { ApiError, fieldErrors, staffApi } from '../lib/api';
 import { fmtPhone } from '../lib/format';
-import type { LatLng, Order } from '../lib/types';
+import type { ExtractedDraft, LatLng, Order } from '../lib/types';
 
 // Dispatchers paste coordinates straight from Google Maps: "6.6142, 3.3581".
 function parseLatLng(text: string): LatLng | null | 'invalid' {
@@ -18,15 +19,33 @@ function parseLatLng(text: string): LatLng | null | 'invalid' {
 }
 const showLatLng = (l: LatLng | null) => (l ? `${l.lat}, ${l.lng}` : '');
 
-export function OrderForm({ order, onClose, onSaved }: { order?: Order; onClose: () => void; onSaved: (o: Order) => void }) {
+const FIELD_LABEL: Record<string, string> = {
+  customer_name: 'customer name', customer_phone: 'phone number', pickup_address: 'pickup address', dropoff_address: 'dropoff address',
+};
+
+/**
+ * Create or edit an order. With `draft` it opens prefilled from a WhatsApp
+ * message read by the AI, for the dispatcher to check and complete.
+ */
+export function OrderForm({ order, draft, onClose, onSaved, onBack }: {
+  order?: Order;
+  draft?: ExtractedDraft;
+  onClose: () => void;
+  onSaved: (o: Order) => void;
+  onBack?: () => void;
+}) {
+  const d = draft?.draft;
   const [f, setF] = useState({
-    customer_name: order?.customer_name ?? '',
-    customer_phone: order ? fmtPhone(order.customer_phone) : '',
-    pickup_address: order?.pickup_address ?? '',
+    customer_name: order?.customer_name ?? d?.customer_name ?? '',
+    customer_phone: order ? fmtPhone(order.customer_phone) : d?.customer_phone ? (draft?.phone_valid ? fmtPhone(d.customer_phone) : d.customer_phone) : '',
+    pickup_address: order?.pickup_address ?? d?.pickup_address ?? '',
     pickup_location: showLatLng(order?.pickup_location ?? null),
-    dropoff_address: order?.dropoff_address ?? '',
+    pickup_notes: order?.pickup_notes ?? d?.pickup_notes ?? '',
+    dropoff_address: order?.dropoff_address ?? d?.dropoff_address ?? '',
     dropoff_location: showLatLng(order?.dropoff_location ?? null),
+    dropoff_notes: order?.dropoff_notes ?? d?.dropoff_notes ?? '',
   });
+  const missing = new Set(draft?.missing ?? []);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -59,6 +78,8 @@ export function OrderForm({ order, onClose, onSaved }: { order?: Order; onClose:
     const body: Record<string, unknown> = {
       customer_name: f.customer_name,
       customer_phone: f.customer_phone,
+      pickup_notes: f.pickup_notes,
+      dropoff_notes: f.dropoff_notes,
     };
     if (!pickupLocked) {
       Object.assign(body, {
@@ -82,44 +103,69 @@ export function OrderForm({ order, onClose, onSaved }: { order?: Order; onClose:
     }
   };
 
+  const gap = (k: string, normal?: string) => (missing.has(k) ? 'Not in the message. Ask the customer.' : normal);
+  const gapClass = (k: string) => (missing.has(k) && !f[k as keyof typeof f] ? ' is-missing' : '');
+
   return (
     <Modal
-      title={order ? `Edit order #${order.id}` : 'New order'}
+      title={order ? `Edit order #${order.id}` : draft ? 'Check the order from WhatsApp' : 'New order'}
       onClose={onClose}
       wide
       footer={<>
+        {onBack && <button type="button" className="btn btn-ghost" onClick={onBack}><Icon name="left" /> Back to message</button>}
+        <span className="grow" />
         <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
         <button type="submit" form="order-form" className="btn btn-primary" disabled={busy}>{busy ? 'Saving…' : order ? 'Save changes' : 'Create order'}</button>
       </>}
     >
       <form id="order-form" onSubmit={submit}>
         <ErrorAlert error={error} />
+        {draft && (
+          <div className="alert alert-info draft-banner">
+            <Icon name="sparkle" />
+            <div>
+              <strong>Filled in by AI from the message.</strong> Check every field before you create the order.
+              {draft.missing.length > 0 && <div>Missing: {draft.missing.map((k) => FIELD_LABEL[k] ?? k).join(', ')}.</div>}
+              {draft.warnings.map((w) => <div key={w} className="text-warning">{w}</div>)}
+            </div>
+          </div>
+        )}
         <div className="form-section">Customer</div>
         <div className="form-row">
-          <Field label="Name" error={errors.customer_name}>
-            <input className="form-control" required value={f.customer_name} onChange={set('customer_name')} autoFocus />
+          <Field label="Name" error={errors.customer_name} hint={gap('customer_name')}>
+            <input className={`form-control${gapClass('customer_name')}`} required value={f.customer_name} onChange={set('customer_name')} autoFocus />
           </Field>
-          <Field label="Phone" error={errors.customer_phone} hint="Any Nigerian format, 0803 123 4567 or +234…">
-            <input className="form-control mono" required inputMode="tel" value={f.customer_phone} onChange={set('customer_phone')} />
+          <Field label="Phone" error={errors.customer_phone} hint={gap('customer_phone', 'Any Nigerian format, 0803 123 4567 or +234…')}>
+            <input className={`form-control mono${gapClass('customer_phone')}`} required inputMode="tel" value={f.customer_phone} onChange={set('customer_phone')} />
           </Field>
         </div>
 
         {pickupLocked && <div className="alert alert-warning">The driver has already collected this order, so the addresses are locked.</div>}
 
         <div className="form-section">Pickup</div>
-        <Field label="Address" error={errors.pickup_address} hint={maps && !pickupLocked ? 'Start typing and pick a suggestion to fill the coordinates.' : undefined}>
-          <AddressInput required disabled={pickupLocked} value={f.pickup_address} onChange={setText('pickup_address')} onPick={setPlace('pickup')} placeholder="Ikeja City Mall, Obafemi Awolowo Way" />
+        <Field label="Address" error={errors.pickup_address} hint={gap('pickup_address', maps && !pickupLocked ? 'Start typing and pick a suggestion to fill the coordinates.' : undefined)}>
+          <div className={gapClass('pickup_address')}>
+            <AddressInput required disabled={pickupLocked} value={f.pickup_address} onChange={setText('pickup_address')} onPick={setPlace('pickup')} placeholder="Ikeja City Mall, Obafemi Awolowo Way" />
+          </div>
         </Field>
         <Field label="Coordinates (optional)" error={errors.pickup_location} hint={maps ? 'Filled from the address. You can also paste from Google Maps.' : 'Paste from Google Maps. Used for distance estimates now and optimization later.'}>
-          <input className="form-control mono" disabled={pickupLocked} value={f.pickup_location} onChange={set('pickup_location')} placeholder="6.6142, 3.3581" />
+          <input className="form-control mono" disabled={pickupLocked} value={f.pickup_location} onChange={set('pickup_location')} placeholder="e.g. 6.6142, 3.3581" />
+        </Field>
+        <Field label="Notes for the driver (optional)" error={errors.pickup_notes} hint="Who to ask for, what to collect. The driver sees this at the pickup.">
+          <textarea className="form-control" rows={2} maxLength={1000} value={f.pickup_notes} onChange={set('pickup_notes')} placeholder="Ask for Mama Ngozi at the counter" />
         </Field>
 
         <div className="form-section">Dropoff</div>
-        <Field label="Address" error={errors.dropoff_address}>
-          <AddressInput required disabled={pickupLocked} value={f.dropoff_address} onChange={setText('dropoff_address')} onPick={setPlace('dropoff')} placeholder="12 Admiralty Way, Lekki Phase 1" />
+        <Field label="Address" error={errors.dropoff_address} hint={gap('dropoff_address')}>
+          <div className={gapClass('dropoff_address')}>
+            <AddressInput required disabled={pickupLocked} value={f.dropoff_address} onChange={setText('dropoff_address')} onPick={setPlace('dropoff')} placeholder="12 Admiralty Way, Lekki Phase 1" />
+          </div>
         </Field>
         <Field label="Coordinates (optional)" error={errors.dropoff_location}>
-          <input className="form-control mono" disabled={pickupLocked} value={f.dropoff_location} onChange={set('dropoff_location')} placeholder="6.4474, 3.4723" />
+          <input className="form-control mono" disabled={pickupLocked} value={f.dropoff_location} onChange={set('dropoff_location')} placeholder="e.g. 6.4474, 3.4723" />
+        </Field>
+        <Field label="Notes for the driver (optional)" error={errors.dropoff_notes} hint="Landmarks, gate, money to collect, call on arrival. The driver sees this at the dropoff.">
+          <textarea className="form-control" rows={2} maxLength={1000} value={f.dropoff_notes} onChange={set('dropoff_notes')} placeholder="White gate after GTB. Call on arrival. Collect ₦15,000." />
         </Field>
 
         {maps && preview.length > 0 && <StopsMap points={preview} height={220} className="form-map" />}

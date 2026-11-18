@@ -76,12 +76,14 @@ export function OrderDetail() {
             {(['pickup', 'dropoff'] as const).map((kind) => {
               const address = kind === 'pickup' ? order.pickup_address : order.dropoff_address;
               const loc = kind === 'pickup' ? order.pickup_location : order.dropoff_location;
+              const notes = kind === 'pickup' ? order.pickup_notes : order.dropoff_notes;
               return (
                 <li key={kind} className={`journey-stop ${kind}`}>
                   <span className="journey-dot"><Icon name={kind} /></span>
                   <div className="grow">
                     <div className="text-xs text-muted" style={{ textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 700 }}>{kind}</div>
                     <div>{address}</div>
+                    {notes && <div className="stop-notes"><Icon name="note" /><span>{notes}</span></div>}
                     {loc ? <div className="text-xs text-muted mono">{loc.lat}, {loc.lng}</div> : <div className="text-xs text-warning">No coordinates yet</div>}
                   </div>
                   <a className="btn btn-ghost btn-sm" href={mapsUrl(loc, address)} target="_blank" rel="noreferrer"><Icon name="navigate" /> Map</a>

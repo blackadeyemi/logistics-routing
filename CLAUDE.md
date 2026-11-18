@@ -21,8 +21,12 @@ dispatching drivers via WhatsApp or phone calls who wants a real dashboard.
   `VITE_GOOGLE_MAPS_API_KEY` in the root .env as a fallback; without a key the app falls back to typed coordinates
   and an SVG sketch. Loader in `web/src/lib/maps.ts`, components in
   `web/src/components/maps.tsx`.
-- LLM: Claude via the official `anthropic` Python SDK. The model ID comes
-  from the `LLM_MODEL` env var, never hardcoded.
+- LLM: Claude via the official `anthropic` Python SDK. An admin sets the
+  Anthropic API key and picks the model on the Settings page. api-node
+  stores the key encrypted (AES-256-GCM, `SETTINGS_ENCRYPTION_KEY` in
+  .env), never returns it to a browser, and passes key and model to
+  service-python per request. `ANTHROPIC_API_KEY` and `LLM_MODEL` in .env
+  are the fallback. Model IDs are never hardcoded in request code.
 
 ## UI design
 The web app follows the GDS design language (the same look the Sports Club
@@ -47,7 +51,7 @@ visual language or a CSS framework.
   `npm run build && npm run preview` tests the real service worker, which
   is off in dev.
 
-## Current phase: Phase 1
+## Current phase: Phase 2
 Build only what the current phase lists. Do not start work from a later
 phase until told to move to it. Each phase is done when its exit criteria
 are met.
@@ -234,5 +238,7 @@ Exit criteria:
   Use commas, colons, or separate sentences instead.
 - Keep the Python service stateless and callable only from api-node; it
   should not be exposed publicly.
-- Secrets such as `ANTHROPIC_API_KEY` live in `.env` only and are listed
-  without values in `.env.example`.
+- Secrets live in `.env` (listed without values in `.env.example`) or, for
+  the ones an admin manages in the app such as the Anthropic API key,
+  encrypted in `app_settings`. Server secrets are write-only from the UI:
+  the API returns at most a masked hint, never the value.

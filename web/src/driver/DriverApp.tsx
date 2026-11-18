@@ -293,6 +293,7 @@ function StopCard({ stop, route, isNext, confirming, onAction, onCancelSkip }: {
       </div>
       <div className="stop-card-address">{stop.address}</div>
       <div className="stop-card-customer">{stop.customer_name} · <span className="mono">{fmtPhone(stop.customer_phone)}</span></div>
+      {stop.notes && <div className="stop-card-notes"><Icon name="note" size={16} /><span>{stop.notes}</span></div>}
 
       <div className="stop-card-links">
         <a className="btn btn-ghost" href={`tel:${stop.customer_phone}`}><Icon name="phone" /> Call</a>

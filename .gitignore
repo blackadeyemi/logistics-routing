@@ -11,3 +11,4 @@ dev-dist/
 .vscode/
 *.log
 coverage/
+service-python/evals/results/*-partial.json

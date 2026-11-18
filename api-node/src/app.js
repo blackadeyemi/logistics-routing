@@ -27,6 +27,7 @@ app.use('/routes', require('./routes/routes'));
 app.use('/driver', require('./routes/driver'));
 app.use('/stats', require('./routes/stats'));
 app.use('/settings', require('./routes/settings'));
+app.use('/ai', require('./routes/ai'));
 
 app.use(notFound);
 app.use(errorHandler);

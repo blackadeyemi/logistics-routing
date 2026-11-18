@@ -80,7 +80,7 @@ flowchart LR
 | Phase | Scope | Status |
 | --- | --- | --- |
 | 1. Manual dispatch | Auth, CRUD, manual routes, offline driver PWA, Lagos seed data | Done, tested on a Pixel 7 Pro (install, offline queue, sync) |
-| 2. AI layer | WhatsApp message to validated order (Pydantic structured output), dispatch copilot agent with tool calls and human confirmation of every write, RAG over driver notes and SOPs with pgvector, evals in the repo | Next |
+| 2. AI layer | WhatsApp message to validated order (Pydantic structured output), dispatch copilot agent with tool calls and human confirmation of every write, RAG over driver notes and SOPs with pgvector, evals in the repo | In progress |
 | 3. Route optimization | OR-Tools vehicle routing with pickup before dropoff, capacity and time windows, compared against the manual plan | Planned |
 | 4. Live tracking | Driver location, WebSocket updates, live map, ETAs, customer SMS tracking link | Planned |
 | 5. Traffic-aware routing | Road distances and durations, Lagos rush-hour profiles | Planned |
@@ -123,8 +123,63 @@ cd api-node && npm install && npm test
 ```
 
 The API tests cover auth and roles, validation and phone normalisation,
-the route rules, a full driver day with offline retries, and the settings
-endpoints.
+the route rules, a full driver day with offline retries, the settings
+endpoints (the Anthropic key is never returned and is stored encrypted),
+and WhatsApp intake against a stand-in AI service.
+
+## AI evals
+
+The AI features are measured, not eyeballed. Each eval lives in
+`service-python/evals/`, runs through the real stack (api-node auth,
+service-python, Anthropic) with one command, and prints the table below.
+
+### Order intake from WhatsApp
+
+32 realistic messages a Lagos courier receives: English, Pidgin, Yoruba,
+Igbo and Hausa greetings, forwarded chats, emojis, heavy typos, phone
+numbers in five formats, two numbers in one message, returns, landmark-only
+addresses, gate codes, cash on delivery, time windows, a message that tries
+to override the rules, and a question that is not an order at all.
+
+Each field is scored on its own: the name must match ignoring titles (Mrs,
+Dr, Baba), the phone must be the exact `+234` number (or be flagged when
+invalid), addresses and notes must contain the key terms (house number,
+street, area, landmark, amount, gate code), and a field the message does
+not mention must stay empty, so invented details count as failures.
+
+| Field | Claude Sonnet 5.5 | Claude Opus 5.5 |
+| --- | --- | --- |
+| Customer name | 97% (31/32) | 100% (32/32) |
+| Customer phone | 97% (31/32) | 100% (32/32) |
+| Pickup address | 97% (31/32) | 100% (32/32) |
+| Dropoff address | 97% (31/32) | 100% (32/32) |
+| Pickup notes | 100% (15/15) | 100% (15/15) |
+| Dropoff notes | 100% (18/18) | 100% (18/18) |
+| **All fields** | **98% (157/161)** | **100% (161/161)** |
+| Messages fully right | 31/32 | 32/32 |
+| Median time per message | 2.6 s | 2.5 s |
+| Cost of the 32-message run | $0.14 | $0.29 |
+
+Run on 18 November 2026. Sonnet's four misses are one message whose
+request failed: the reply ran on to the token cap and came back
+unparseable, so every field of that message counts as wrong. The service
+now caps the reply at 2,048 tokens and retries once, which turned the same
+message into a pass on three reruns; the table above is from before that
+change.
+
+What changed between runs, and why: the first run scored 98% on both
+models. Two misses were real (a house number read as "2 = to", and a price
+question turned into a dropoff in Ibadan), so the prompt gained a rule for
+each. One miss was the test's fault (a shop number in the address instead
+of the notes, which is just as useful to a rider) and the case was relaxed.
+
+```sh
+docker compose exec service-python python -m evals.run_extraction --model claude-sonnet-5-5 --model claude-opus-5-5
+docker compose exec service-python python -m evals.run_extraction --only pidgin   # one case, does not replace saved results
+```
+
+A full run costs about $0.14 on Sonnet 5.5. Results are saved to
+`service-python/evals/results/`.
 
 ## Repository layout
 

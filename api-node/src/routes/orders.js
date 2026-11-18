@@ -17,7 +17,8 @@ const SELECT = `
          o.pickup_address, ${latLngSql('o.pickup_location', 'pickup')},
          o.dropoff_address, ${latLngSql('o.dropoff_location', 'dropoff')},
          o.status, o.created_at,
-         ps.id AS pickup_stop_id, ds.id AS dropoff_stop_id, ps.route_id
+         ps.id AS pickup_stop_id, ds.id AS dropoff_stop_id, ps.route_id,
+         ps.notes AS pickup_notes, ds.notes AS dropoff_notes
   FROM orders o
   LEFT JOIN stops ps ON ps.order_id = o.id AND ps.stop_type = 'pickup'
   LEFT JOIN stops ds ON ds.order_id = o.id AND ds.stop_type = 'dropoff'`;
@@ -31,6 +32,8 @@ function shape(r) {
     pickup_location: toLocation(r.pickup_lat, r.pickup_lng),
     dropoff_address: r.dropoff_address,
     dropoff_location: toLocation(r.dropoff_lat, r.dropoff_lng),
+    pickup_notes: r.pickup_notes,
+    dropoff_notes: r.dropoff_notes,
     status: r.status,
     route_id: r.route_id,
     pickup_stop_id: r.pickup_stop_id,
@@ -52,12 +55,17 @@ const fields = {
   pickup_location: location,
   dropoff_address: z.string().trim().min(1),
   dropoff_location: location,
+  // Driver notes for each stop. Empty strings are stored as null.
+  pickup_notes: z.string().trim().max(1000).nullable().transform((v) => v || null),
+  dropoff_notes: z.string().trim().max(1000).nullable().transform((v) => v || null),
 };
 
 const createOrder = z.object({
   ...fields,
   pickup_location: location.optional().default(null),
   dropoff_location: location.optional().default(null),
+  pickup_notes: fields.pickup_notes.optional().default(null),
+  dropoff_notes: fields.dropoff_notes.optional().default(null),
 });
 const updateOrder = z.object(fields).partial();
 
@@ -123,11 +131,11 @@ router.post('/', asyncHandler(async (req, res) => {
     // Every order has exactly one pickup and one dropoff stop. They start
     // unassigned and get a route when the dispatcher plans the day.
     await db.query(
-      `INSERT INTO stops (order_id, stop_type, address, location)
-       SELECT $1, 'pickup', pickup_address, pickup_location FROM orders WHERE id = $1
+      `INSERT INTO stops (order_id, stop_type, address, location, notes)
+       SELECT $1, 'pickup', pickup_address, pickup_location, $2 FROM orders WHERE id = $1
        UNION ALL
-       SELECT $1, 'dropoff', dropoff_address, dropoff_location FROM orders WHERE id = $1`,
-      [orderId],
+       SELECT $1, 'dropoff', dropoff_address, dropoff_location, $3 FROM orders WHERE id = $1`,
+      [orderId, b.pickup_notes, b.dropoff_notes],
     );
     await recordEvent(db, { orderId, type: 'created', ...staffActor(req) });
     return getOrder(db, orderId);
@@ -175,6 +183,12 @@ router.patch('/:id', asyncHandler(async (req, res) => {
        FROM orders o WHERE o.id = s.order_id AND o.id = $1`,
       [orderId],
     );
+    // Notes can change at any time, even mid-route: the driver sees the
+    // update on their next refresh.
+    for (const kind of ['pickup', 'dropoff']) {
+      if (!(`${kind}_notes` in b)) continue;
+      await db.query('UPDATE stops SET notes = $3 WHERE order_id = $1 AND stop_type = $2', [orderId, kind, b[`${kind}_notes`]]);
+    }
     await recordEvent(db, { orderId, type: 'updated', ...staffActor(req) });
     return getOrder(db, orderId);
   });

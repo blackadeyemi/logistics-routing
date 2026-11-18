@@ -96,8 +96,8 @@ Driver responses include `has_pin` and the assigned `vehicle`.
 |---|---|---|
 | GET | /orders | `?status=pending,assigned&q=lekki&date=YYYY-MM-DD&limit=50&offset=0` |
 | GET | /orders/:id | Includes `events`, the order timeline |
-| POST | /orders | `customer_name, customer_phone, pickup_address, pickup_location?, dropoff_address, dropoff_location?` |
-| PATCH | /orders/:id | Any create field. Addresses lock once the driver starts that stop |
+| POST | /orders | `customer_name, customer_phone, pickup_address, pickup_location?, pickup_notes?, dropoff_address, dropoff_location?, dropoff_notes?` |
+| PATCH | /orders/:id | Any create field. Addresses lock once the driver starts that stop; notes can change any time and show on the stops (`notes`) in routes and the driver app |
 | POST | /orders/:id/cancel | Only pending or assigned orders |
 
 Creating an order also creates its two stops, returned as
@@ -179,13 +179,66 @@ Response fields, all numbers except `date`:
 - `drivers_active`: active drivers; `drivers_free`: active drivers with no
   route today; `drivers_without_pin`: active drivers who cannot log in yet
 
+### AI (staff)
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| POST | `/ai/extract-order` | Body `{ message }` (5 to 4000 chars). Returns a draft order read from a WhatsApp message. Saves nothing |
+
+Response:
+
+```json
+{
+  "draft": {
+    "customer_name": "Chinedu Okeke", "customer_phone": "+2348034567890",
+    "pickup_address": "23 Allen Avenue, Ikeja, opposite Mr Biggs", "pickup_notes": null,
+    "dropoff_address": "5 Admiralty Way, Lekki Phase 1", "dropoff_notes": "Collect 15,000 naira on delivery. Call before arriving."
+  },
+  "phone_valid": true,
+  "missing": [],
+  "warnings": [],
+  "model": "claude-sonnet-5-5",
+  "usage": { "input_tokens": 1605, "output_tokens": 151, "duration_ms": 4286 }
+}
+```
+
+- Any draft field can be null; `missing` lists the required order fields
+  the message did not contain. The dispatcher completes them and saves
+  through `POST /orders`.
+- `customer_phone` is normalised to `+234…` when it is a Nigerian mobile
+  number; otherwise it is returned as written, `phone_valid` is false and
+  `warnings` says so.
+- 409 with `details.code` `not_configured` when no key or model is set.
+  422 `refusal` or `incomplete` when the model declines or returns no
+  draft. Key and model errors are the same as `/settings/ai/check`.
+- Every call is recorded in `ai_usage` (user, feature, model, tokens,
+  duration, ok).
+
 ### Settings
 
 | Method | Path | Who | Notes |
 | --- | --- | --- | --- |
-| GET | `/settings` | staff | `{ google_maps: { api_key, map_id, updated_at, updated_by } }`. Empty strings when not set |
-| PUT | `/settings` | admin | Body `{ google_maps: { api_key?, map_id? } }`. Omitted fields are kept, `""` clears one. The key must be 20 to 200 letters, digits, `-` or `_` |
+| GET | `/settings` | staff | `{ google_maps: {...}, ai: {...} }`, see below |
+| PUT | `/settings` | admin | Body `{ google_maps?: { api_key?, map_id? }, ai?: { api_key?, model? } }`. Omitted fields are kept, `""` clears one |
+| POST | `/settings/ai/check` | admin | Body `{ api_key? }`. Checks the typed key, or the saved one, with Anthropic and returns `{ ok, models: [{ id, display_name, max_input_tokens, max_tokens }] }`. Saves nothing, uses no tokens |
 
-The Google Maps key is a browser key, sent to every staff browser so the
-dashboard can draw maps. Its protection is the referrer and API
-restriction in Google Cloud, which is why dispatchers can read it.
+`google_maps` is `{ api_key, map_id, updated_at, updated_by }`. The Maps
+key is a browser key, sent to every staff browser so the dashboard can draw
+maps. Its protection is the referrer and API restriction in Google Cloud,
+which is why dispatchers can read it.
+
+`ai` never contains the Anthropic key:
+
+- `api_key_set`, `api_key_hint` (masked, `sk-ant-…AbCd`)
+- `key_source`: `settings`, `env` (`ANTHROPIC_API_KEY`) or `none`
+- `key_unreadable`: a key is saved but cannot be decrypted, usually
+  because `SETTINGS_ENCRYPTION_KEY` changed
+- `model` and `model_source` (`settings`, `env` from `LLM_MODEL`, `none`)
+- `can_save_secrets`: false when `SETTINGS_ENCRYPTION_KEY` is missing;
+  saving a key then returns 409
+- `updated_at`, `updated_by`
+
+Anthropic keys must match `sk-ant-…`, model IDs `claude-…`. A key Anthropic
+rejects comes back as 400 with `details.code` `invalid_key`; other codes are
+`permission`, `rate_limited` (429), `upstream` and `network` (502), and 503
+when service-python is not reachable.

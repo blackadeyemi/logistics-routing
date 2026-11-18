@@ -37,8 +37,8 @@ services:
     build: ./service-python
     container_name: logistics-service-python
     restart: unless-stopped
-    ports:
-      - "${PYTHON_HOST_PORT:-8000}:8000"
+    # Internal only: no published port. api-node reaches it at
+    # http://service-python:8000 on the compose network.
     env_file:
       - .env
     depends_on:

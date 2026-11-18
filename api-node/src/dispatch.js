@@ -46,7 +46,7 @@ const ROUTE_SELECT = `
 
 async function getRouteStops(db, routeId) {
   const { rows } = await db.query(
-    `SELECT s.id, s.order_id, s.sequence_number, s.stop_type, s.address,
+    `SELECT s.id, s.order_id, s.sequence_number, s.stop_type, s.address, s.notes,
             ${latLngSql('s.location', 'loc')}, s.status, s.arrived_at, s.completed_at,
             o.customer_name, o.customer_phone, o.status AS order_status
      FROM stops s JOIN orders o ON o.id = s.order_id

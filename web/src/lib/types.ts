@@ -47,6 +47,8 @@ export interface Order {
   pickup_location: LatLng | null;
   dropoff_address: string;
   dropoff_location: LatLng | null;
+  pickup_notes: string | null;
+  dropoff_notes: string | null;
   status: OrderStatus;
   route_id: number | null;
   pickup_stop_id: number;
@@ -81,6 +83,7 @@ export interface RouteStop {
   sequence_number: number;
   stop_type: StopType;
   address: string;
+  notes: string | null;
   location: LatLng | null;
   status: StopStatus;
   arrived_at: string | null;
@@ -134,4 +137,41 @@ export interface AppSettings {
     updated_at: string | null;
     updated_by: string | null;
   };
+  ai: {
+    api_key_set: boolean;
+    /** Masked, for example "sk-ant-…AbCd". The key itself never reaches the browser. */
+    api_key_hint: string | null;
+    key_source: 'settings' | 'env' | 'none';
+    key_unreadable: boolean;
+    model: string;
+    model_source: 'settings' | 'env' | 'none';
+    can_save_secrets: boolean;
+    updated_at: string | null;
+    updated_by: string | null;
+  };
+}
+
+export interface AiModel {
+  id: string;
+  display_name: string;
+  created_at: string | null;
+  max_input_tokens: number | null;
+  max_tokens: number | null;
+}
+
+/** POST /ai/extract-order: a WhatsApp message read into a draft order. */
+export interface ExtractedDraft {
+  draft: {
+    customer_name: string | null;
+    customer_phone: string | null;
+    pickup_address: string | null;
+    pickup_notes: string | null;
+    dropoff_address: string | null;
+    dropoff_notes: string | null;
+  };
+  phone_valid: boolean;
+  missing: string[];
+  warnings: string[];
+  model: string;
+  usage: { input_tokens: number; output_tokens: number; duration_ms: number };
 }

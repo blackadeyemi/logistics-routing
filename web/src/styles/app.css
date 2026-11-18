@@ -188,3 +188,33 @@
 .settings-help ol { padding-left: 1.2rem; margin: 0.6rem 0 1rem; display: grid; gap: 0.55rem; font-size: 0.9rem; color: var(--ink-soft); }
 .settings-help ul { padding-left: 1.1rem; margin: 0.35rem 0 0; }
 .settings-help code { font-size: 0.82rem; background: var(--surface-2); padding: 0.1em 0.4em; border-radius: 5px; }
+.settings-stack { display: grid; gap: 1.25rem; }
+.model-list { display: grid; gap: 0.5rem; }
+.model-opt {
+    display: flex; align-items: center; gap: 0.75rem; padding: 0.7rem 0.85rem;
+    border: 1px solid var(--line); border-radius: 10px; cursor: pointer; background: var(--surface);
+}
+.model-opt:hover { border-color: color-mix(in srgb, var(--brand) 40%, var(--line)); }
+.model-opt.selected { border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 14%, transparent); }
+.model-opt input { accent-color: var(--brand); flex: none; }
+.model-opt .grow { display: flex; flex-direction: column; gap: 0.15rem; }
+.model-name { font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.model-price { display: flex; flex-direction: column; align-items: flex-end; text-align: right; flex: none; }
+.model-price strong { color: var(--ink); font-size: 0.85rem; }
+.model-more { margin-top: 0.6rem; }
+.model-more summary { cursor: pointer; color: var(--brand); margin-bottom: 0.5rem; }
+@media (max-width: 520px) { .model-opt { flex-wrap: wrap; } .model-price { align-items: flex-start; text-align: left; width: 100%; padding-left: 1.6rem; } }
+
+/* ---- WhatsApp intake ---- */
+.alert-info { background: var(--info-bg); color: var(--info); }
+.draft-banner { display: flex; gap: 0.6rem; align-items: flex-start; }
+.draft-banner svg { width: 18px; height: 18px; flex: none; margin-top: 2px; }
+.draft-banner strong { color: inherit; }
+.form-control.is-missing, .is-missing .form-control { border-color: var(--warning); background: var(--warning-bg); }
+.intake-text { font-family: var(--font); line-height: 1.5; resize: vertical; min-height: 10rem; }
+.intake-foot { margin-top: 0.4rem; }
+.stop-notes { display: flex; gap: 0.45rem; align-items: flex-start; margin-top: 0.35rem; font-size: 0.85rem; color: var(--ink-soft); }
+.stop-notes svg { width: 14px; height: 14px; flex: none; margin-top: 3px; color: var(--muted); }
+.stop-card-notes { display: flex; gap: 0.5rem; align-items: flex-start; margin: 0.55rem 0 0.2rem; padding: 0.55rem 0.7rem; border-radius: 9px;
+    background: var(--warning-bg); color: var(--ink); font-size: 0.95rem; line-height: 1.4; }
+.stop-card-notes svg { flex: none; margin-top: 2px; color: var(--warning); }
