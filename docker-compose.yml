@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: logistics-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PG_USER:-appuser}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-apppass}
+      POSTGRES_DB: ${PG_DATABASE:-logistics}
+    ports:
+      - "${PG_HOST_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-appuser}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api-node:
+    build: ./api-node
+    container_name: logistics-api-node
+    restart: unless-stopped
+    ports:
+      - "${API_HOST_PORT:-3000}:3000"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./api-node:/app
+      - /app/node_modules
+
+  service-python:
+    build: ./service-python
+    container_name: logistics-service-python
+    restart: unless-stopped
+    ports:
+      - "${PYTHON_HOST_PORT:-8000}:8000"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./service-python:/app
+
+volumes:
+  pgdata:
