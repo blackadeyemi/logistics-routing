@@ -21,6 +21,22 @@ export function OrderDetail() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const maps = useMapsEnabled();
+  const [copied, setCopied] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [smsError, setSmsError] = useState<string | null>(null);
+
+  const sendLink = async () => {
+    setSending(true);
+    setSmsError(null);
+    try {
+      await staffApi(`/orders/${id}/send-tracking`, { method: 'POST' });
+      void reload();
+    } catch (err) {
+      setSmsError(err instanceof ApiError ? err.message : 'Could not send the SMS');
+    } finally {
+      setSending(false);
+    }
+  };
 
   const cancel = async () => {
     setActionError(null);
@@ -110,6 +126,28 @@ export function OrderDetail() {
               </li>
             ))}
           </ol>
+
+          <div className="form-section">Customer tracking</div>
+          <div className="track-link">
+            <input className="form-control mono" readOnly value={order.tracking_url} onFocus={(e) => e.target.select()} aria-label="Tracking link" />
+            <button className="btn btn-ghost btn-sm" onClick={() => { void navigator.clipboard?.writeText(order.tracking_url); setCopied(true); window.setTimeout(() => setCopied(false), 1500); }}>{copied ? 'Copied' : 'Copy'}</button>
+            <a className="btn btn-ghost btn-sm" href={order.tracking_url} target="_blank" rel="noreferrer"><Icon name="external" /> Open</a>
+          </div>
+          {order.status !== 'cancelled' && (
+            <button className="btn btn-ghost btn-sm mt-2" onClick={sendLink} disabled={sending}><Icon name="message" /> {sending ? 'Sending…' : 'Send tracking link by SMS'}</button>
+          )}
+          {smsError && <div className="alert alert-error mt-2">{smsError}</div>}
+          {order.sms.length > 0 && (
+            <ul className="sms-list">
+              {order.sms.map((m) => (
+                <li key={m.id}>
+                  <span className="text-xs text-muted">{fmtDateTime(m.created_at)} · {m.status === 'logged' ? 'outbox only, SMS not set up' : m.status}</span>
+                  <span className="text-sm">{m.body}</span>
+                  {m.error && <span className="text-xs text-danger">{m.error}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </div>
 

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { startLive, stopLive, useLiveEvents, type LiveEvent } from '../lib/live';
 import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Icon, type IconName } from '../components/Icon';
 import { Mark, NetStatus, SettingsMenu, useClickOutside } from '../components/ui';
@@ -13,6 +14,7 @@ interface NavItem { to: string; label: string; icon: IconName; adminOnly?: boole
 
 const OPERATIONS: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: 'dashboard' },
+  { to: '/live', label: 'Live map', icon: 'navigate' },
   { to: '/orders', label: 'Orders', icon: 'orders' },
   { to: '/routes', label: 'Routes', icon: 'routes' },
   { to: '/knowledge', label: 'Knowledge', icon: 'book' },
@@ -28,6 +30,8 @@ const ADMIN: NavItem[] = [
 
 const TITLES: [RegExp, string][] = [
   [/^\/$/, 'Dashboard'],
+  [/^\/live/, 'Live map'],
+  [/^\/messages/, 'Customer SMS'],
   [/^\/orders\/\d+/, 'Order'],
   [/^\/orders/, 'Orders'],
   [/^\/routes\/optimize/, 'Optimize'],
@@ -102,6 +106,22 @@ export function AdminLayout() {
       .then((s) => configureMaps({ key: s.google_maps.api_key, mapId: s.google_maps.map_id }))
       .catch(() => { /* keep the .env fallback */ });
   }, [user]);
+
+  // Live updates: one WebSocket while signed in. Any change to routes,
+  // stops or orders refreshes the data on screen (quietly, debounced), so
+  // pages follow the drivers without anyone pressing reload.
+  useEffect(() => {
+    if (!user) return undefined;
+    startLive();
+    return stopLive;
+  }, [user]);
+  const refreshTimer = useRef<number | undefined>(undefined);
+  const onLive = useCallback((e: LiveEvent) => {
+    if (e.type === 'location' || e.type === 'hello') return;
+    window.clearTimeout(refreshTimer.current);
+    refreshTimer.current = window.setTimeout(() => window.dispatchEvent(new CustomEvent('data:changed')), 600);
+  }, []);
+  useLiveEvents(onLive);
 
   if (!ready) return null;
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;

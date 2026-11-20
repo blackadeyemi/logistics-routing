@@ -7,12 +7,13 @@ installable driver app that keeps working when the network drops.
 
 The project is being built in phases, from manual dispatch up to an
 LLM-powered dispatch assistant, route optimization and live tracking.
-**Phases 1 to 3 are done**: manual dispatch with an offline driver app
+**Phases 1 to 4 are done**: manual dispatch with an offline driver app
 tested on a real Android phone; an AI layer built on FastAPI and Claude
 with structured extraction, a tool-using dispatch copilot, and retrieval
-over company procedures and driver notes; and route optimization with
-OR-Tools that cuts a seeded day from 373 km to 100 km. Each is measured by
-an eval in this repo.
+over company procedures and driver notes; route optimization with
+OR-Tools that cuts a seeded day from 373 km to 100 km; and live tracking
+with a WebSocket map, ETAs and SMS tracking links for customers. Each is
+measured by an eval or benchmark in this repo.
 
 | Dispatcher dashboard | Driver app (PWA) |
 | --- | --- |
@@ -23,6 +24,10 @@ an eval in this repo.
 ![Dispatch copilot](docs/screenshots/copilot.png)
 
 ![Route optimization](docs/screenshots/optimize.png)
+
+| Live map | Customer tracking page |
+| --- | --- |
+| ![Live map](docs/screenshots/live.png) | <img src="docs/screenshots/track.png" width="260" alt="Customer tracking page"> |
 
 ## What it does today
 
@@ -39,6 +44,15 @@ an eval in this repo.
   current one: km and stops per driver, arrival times, and anything it
   could not place. Routes can be kept as they are. Nothing changes until
   the dispatcher accepts, and every route can still be edited afterwards.
+- **Live map:** every driver's position, their remaining stops and an ETA
+  for each, updated over a WebSocket as drivers move and tap. Any page
+  showing routes or orders refreshes by itself when something changes.
+  A tracking-quality table shows how much location data actually arrived
+  per driver, and how much was lost while the app was in the background.
+- **Customer SMS:** a text with a tracking link when the driver sets off
+  to the customer and when the parcel is delivered, or sent by hand from
+  the order page. Through Termii once an admin adds an account; until
+  then texts wait in an outbox in the dashboard.
 - Follow every order through a timeline built from the driver's updates.
 - Manage drivers (with app PINs), vehicles and staff accounts. Admins set
   the Google Maps key, the Anthropic key and the model from the Settings
@@ -66,6 +80,12 @@ an eval in this repo.
 - Mark stops arrived, picked up, en route, delivered, or failed.
 - Keep working offline. The route is cached on the phone, and taps are
   queued with the time they happened and sent when the connection is back.
+- Share location while the route is active: a position every 30 seconds,
+  queued on the phone like taps when there is no network.
+
+**Customers** (public page at `/track/<token>`, no login)
+- Status, a timeline, the ETA, and the driver's position while they are
+  on the way. No phone numbers or other customers' details.
 
 ## Architecture
 
@@ -86,7 +106,9 @@ flowchart LR
 - **web**: React, TypeScript and Vite. One app serves the dashboard at `/`
   and the driver PWA at `/driver` (vite-plugin-pwa, Workbox).
 - **api-node**: Express API, the only service the browser talks to. JWT
-  auth for staff and drivers, zod validation, Postgres through `pg`.
+  auth for staff and drivers, zod validation, Postgres through `pg`, and a
+  WebSocket (`/ws`, staff only) that pushes positions, stop updates and
+  route changes after each commit.
 - **Postgres with PostGIS**: locations stored as `GEOGRAPHY(POINT, 4326)`
   from day one, so the optimizer and live tracking need no migration.
 - **service-python**: FastAPI, internal only, with no published port. It
@@ -132,7 +154,7 @@ flowchart LR
 | 1. Manual dispatch | Auth, CRUD, manual routes, offline driver PWA, Lagos seed data | Done, tested on a Pixel 7 Pro (install, offline queue, sync) |
 | 2. AI layer | WhatsApp message to validated order (Pydantic structured output), dispatch copilot agent with tool calls and human confirmation of every write, RAG over driver notes and SOPs with pgvector, evals in the repo | Done, evals below |
 | 3. Route optimization | OR-Tools vehicle routing with pickup before dropoff, capacity and time windows, compared against the manual plan | Done, benchmark below |
-| 4. Live tracking | Driver location, WebSocket updates, live map, ETAs, customer SMS tracking link | Planned |
+| 4. Live tracking | Driver location, WebSocket updates, live map, ETAs, customer SMS tracking link | Done; background-location measurement on a real phone pending |
 | 5. Traffic-aware routing | Road distances and durations, Lagos rush-hour profiles | Planned |
 | 6. Multi-tenant SaaS | Row level security per company, Paystack billing | Planned |
 | 7. Native driver app | React Native (Expo) for background location and push | Planned |
@@ -147,6 +169,7 @@ Needs Docker and Node 22.
 cp .env.example .env          # set JWT_SECRET to a long random string
 docker compose up -d --build  # Postgres (PostGIS, pgvector), api-node, service-python
 docker compose exec api-node npm run seed    # demo Lagos data
+docker compose exec api-node npm run simulate   # optional: drive today's routes, for the live map
 
 cd web
 npm install
@@ -180,7 +203,10 @@ confirmation rules (nothing changes until confirmed, a confirmation applies
 once, other dispatchers cannot decide your proposals), knowledge indexing and search with a stand-in embedder, and the
 optimizer (distance matrix against haversine, the manual comparison,
 accepting a plan that moves orders between drivers, stale plans, kept
-routes, and refusing a solver plan that breaks a rule).
+routes, and refusing a solver plan that breaks a rule), and live tracking
+(staff-only WebSocket, positions stored once with the time they were
+taken, ETAs, customer texts sent once per event, Termii's request format,
+the public page revealing nothing it should not, and gap measurement).
 
 ## AI evals
 

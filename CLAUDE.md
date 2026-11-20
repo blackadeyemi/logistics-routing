@@ -50,6 +50,8 @@ visual language or a CSS framework.
   `docker compose exec service-python python -m evals.run_extraction`,
   `... evals.run_agent` (needs a freshly seeded day) and
   `... evals.run_retrieval` (free, local embeddings).
+- `docker compose exec api-node npm run simulate` drives today's routes
+  (positions and taps) so the live map, ETAs and SMS can be seen working.
 - Optimizer benchmark (free): `npm run seed -- --reset --manual-day`, then
   `docker compose exec service-python python -m evals.run_optimizer`.
 - `cd web && npm run dev` serves the app on http://logistics-routing.test
@@ -58,9 +60,10 @@ visual language or a CSS framework.
   `npm run build && npm run preview` tests the real service worker, which
   is off in dev.
 
-## Current phase: Phase 3 (exit criteria met)
-Phases 1 to 3 are complete (exit criteria met, evals and the optimizer
-benchmark in the README). Phase 4 starts only when the user says so.
+## Current phase: Phase 4 (exit criteria met)
+Phases 1 to 4 are complete (exit criteria met, evals and benchmarks in the
+README). Still to do in Phase 4: measure background location loss on a
+real phone. Phase 5 starts only when the user says so.
 Build only what the current phase lists. Do not start work from a later
 phase until told to move to it. Each phase is done when its exit criteria
 are met.

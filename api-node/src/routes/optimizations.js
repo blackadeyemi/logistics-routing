@@ -7,6 +7,7 @@ const { z, parse, id, idParam, isoDate } = require('../validation');
 const { requireAuth, STAFF } = require('../auth');
 const { staffActor } = require('../events');
 const { optimizeDay, acceptRun, discardRun, getRun } = require('../optimizer');
+const { publish } = require('../realtime');
 
 const router = express.Router();
 router.use(requireAuth(...STAFF));
@@ -34,7 +35,9 @@ router.get('/:id', asyncHandler(async (req, res) => {
 }));
 
 router.post('/:id/accept', asyncHandler(async (req, res) => {
-  res.json(await acceptRun(idParam(req), req.user.id, staffActor(req)));
+  const run = await acceptRun(idParam(req), req.user.id, staffActor(req));
+  publish({ type: 'route', route_date: run.route_date, optimization_id: run.id });
+  res.json(run);
 }));
 
 router.post('/:id/discard', asyncHandler(async (req, res) => {

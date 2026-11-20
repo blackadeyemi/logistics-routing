@@ -301,6 +301,66 @@
 .doc-body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; line-height: 1.5; }
 .doc-read { white-space: pre-wrap; font-family: var(--font); font-size: 0.9rem; margin: 0; }
 
+/* ---- Driver location sharing ---- */
+.location-strip { display: flex; align-items: center; gap: 0.5rem; padding: 0.45rem 1rem; font-size: 0.82rem; color: var(--ink-soft);
+    background: var(--surface); border-bottom: 1px solid var(--line); }
+.location-strip.denied { background: var(--warning-bg); color: var(--ink); }
+.location-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+.location-strip.on .location-dot { background: var(--success); box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 60%, transparent); animation: pulse 2s infinite; }
+@keyframes pulse { 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+.share-card { display: grid; gap: 0.75rem; margin-bottom: 1rem; }
+
+/* ---- Live map ---- */
+.block { display: block; }
+.live-grid { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: 1rem; align-items: start; }
+@media (max-width: 1000px) { .live-grid { grid-template-columns: 1fr; } }
+.live-list { display: grid; gap: 0.6rem; max-height: 640px; overflow-y: auto; padding-right: 2px; }
+.live-driver { display: grid; gap: 0.45rem; text-align: left; padding: 0.75rem 0.9rem; border-left: 4px solid var(--line); cursor: pointer; font: inherit; color: inherit; width: 100%; }
+.live-driver:hover { border-color: var(--brand); }
+.live-driver.focused { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent); }
+.live-driver .avatar { color: #fff; }
+.live-meta { display: flex; justify-content: space-between; gap: 0.5rem; }
+.live-next { display: flex; align-items: baseline; gap: 0.45rem; font-size: 0.84rem; }
+.live-eta { font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.live-stops { list-style: none; margin: 0.2rem 0 0; padding: 0.4rem 0 0; border-top: 1px solid var(--line); display: grid; gap: 0.25rem; font-size: 0.8rem; }
+.live-stops li { display: flex; gap: 0.45rem; align-items: baseline; }
+.live-stops li.completed, .live-stops li.skipped { opacity: 0.55; }
+.live-stops .stop-type { width: 4.2em; flex: none; }
+.live-map-card { overflow: hidden; }
+.live-map { border-radius: 12px 12px 0 0; }
+.live-note { padding: 0.5rem 1rem; margin: 0; }
+.driver-pin { min-width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font: 700 12px/1 var(--font); border: 3px solid #fff; box-shadow: 0 3px 10px rgba(15, 23, 42, .4); }
+.driver-pin.stale { opacity: 0.55; filter: grayscale(0.6); }
+.map-pin.live.done { background: var(--muted); opacity: 0.5; }
+.sketch-driver circle { stroke: var(--surface); stroke-width: 3; }
+.sketch-driver text { fill: #fff; font-size: 10px; font-weight: 700; font-family: var(--font); pointer-events: none; }
+.sketch-driver.stale { opacity: 0.5; }
+.live-sketch { border-radius: 12px 12px 0 0; }
+
+/* ---- Customer tracking and SMS ---- */
+.track-link { display: flex; gap: 0.4rem; align-items: center; }
+.track-link .form-control { font-size: 0.78rem; }
+.sms-list { list-style: none; margin: 0.6rem 0 0; padding: 0; display: grid; gap: 0.5rem; }
+.sms-list li { display: grid; gap: 0.15rem; border-left: 3px solid var(--line); padding-left: 0.6rem; }
+.sms-body { max-width: 420px; }
+.track-page { min-height: 100vh; background: var(--bg); }
+.track-head { display: flex; align-items: center; gap: 0.6rem; padding: 0.8rem 1rem; background: var(--side-bg); color: var(--side-ink); }
+.track-main { max-width: 560px; margin: 0 auto; padding: 1rem; display: grid; gap: 0.9rem; }
+.track-hero { display: grid; gap: 0.5rem; }
+.track-hero h1 { margin: 0; font-size: 1.5rem; }
+.track-eta { display: flex; gap: 0.75rem; align-items: center; padding: 0.75rem 0.9rem; border-radius: 12px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--grad-a) 14%, transparent), color-mix(in srgb, var(--grad-b) 14%, transparent)); }
+.track-eta svg { width: 26px; height: 26px; color: var(--brand); flex: none; }
+.track-eta-time { font-size: 1.35rem; font-weight: 700; color: var(--ink); }
+.track-map { overflow: hidden; }
+.track-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.7rem; }
+.track-steps li { display: flex; align-items: center; gap: 0.65rem; color: var(--muted); }
+.track-steps li.done { color: var(--ink); }
+.track-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line); display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.track-steps li.done .track-dot { background: var(--success); border-color: var(--success); color: #fff; }
+.track-foot { text-align: center; }
+
 /* ---- Route optimization ---- */
 .form-row.form-row-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 560px) { .form-row.form-row-3 { grid-template-columns: 1fr; } }

@@ -76,6 +76,9 @@ export interface OrderEvent {
 
 export interface OrderDetail extends Order {
   events: OrderEvent[];
+  /** Public page for the customer (Phase 4). */
+  tracking_url: string;
+  sms: SmsMessage[];
 }
 
 export type StopStatus = 'pending' | 'arrived' | 'completed' | 'skipped';
@@ -138,6 +141,21 @@ export interface AppSettings {
   google_maps: {
     api_key: string;
     map_id: string;
+    updated_at: string | null;
+    updated_by: string | null;
+  };
+  sms: {
+    provider: 'log' | 'termii';
+    base_url: string;
+    sender_id: string;
+    channel: 'dnd' | 'generic';
+    api_key_set: boolean;
+    api_key_hint: string | null;
+    key_source: 'settings' | 'env' | 'none';
+    key_unreadable: boolean;
+    public_app_url: string;
+    company_name: string;
+    can_save_secrets: boolean;
     updated_at: string | null;
     updated_by: string | null;
   };
@@ -292,4 +310,87 @@ export interface OptimizationRun {
     stops: PlanStop[];
   }[];
   unassigned: { order_id: number; customer: string; reason: string }[];
+}
+
+// ---- Live tracking and customer SMS (Phase 4) ----
+
+export interface LiveStop {
+  stop_id: number;
+  n: number;
+  type: StopType;
+  status: StopStatus;
+  order_id: number;
+  customer: string;
+  address: string;
+  location: LatLng | null;
+  completed_at: string | null;
+  eta: string | null;
+  eta_minutes: number | null;
+}
+
+export interface LiveRoute {
+  route_id: number;
+  status: RouteStatus;
+  driver_id: number | null;
+  driver: string | null;
+  driver_phone: string | null;
+  vehicle: string | null;
+  location: { lat: number; lng: number; accuracy_m: number | null; recorded_at: string; age_s: number } | null;
+  /** Where the ETAs start: the driver's recent position, or the first stop (no recent position). */
+  eta_from: 'driver' | 'first_stop' | null;
+  stops: LiveStop[];
+}
+
+export interface LiveDay {
+  date: string;
+  routes: LiveRoute[];
+}
+
+export interface TrackingQuality {
+  date: string;
+  expected_interval_s: number;
+  drivers: {
+    driver_id: number;
+    driver: string;
+    points: number;
+    expected_points: number;
+    tracked_minutes: number;
+    coverage: number;
+    gaps_over_90s: number;
+    longest_gap_s: number;
+    gap_minutes: number;
+    gap_minutes_while_hidden: number;
+    hidden_points: number;
+    sent_late_from_queue: number;
+    median_accuracy_m: number | null;
+  }[];
+}
+
+export interface SmsMessage {
+  id: number;
+  order_id: number | null;
+  to_phone: string;
+  body: string;
+  reason: 'en_route' | 'delivered' | 'manual';
+  provider: 'log' | 'termii';
+  status: 'logged' | 'sent' | 'failed';
+  error: string | null;
+  created_at: string;
+  created_by?: string | null;
+  customer_name?: string | null;
+}
+
+/** GET /public/track/:token, the customer's view. */
+export interface PublicTracking {
+  company: string;
+  order_number: number;
+  customer_first_name: string | null;
+  status: OrderStatus;
+  dropoff_address: string;
+  window: { after: string | null; before: string | null } | null;
+  failed_attempt: boolean;
+  eta: { at: string; minutes: number; based_on: 'driver' | 'first_stop' } | null;
+  driver: { first_name: string | null; vehicle: string | null; location?: LatLng & { age_s: number } } | null;
+  events: { type: EventType; at: string }[];
+  maps?: { api_key: string; map_id: string } | null;
 }

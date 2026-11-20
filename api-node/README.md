@@ -276,6 +276,51 @@ only `straight_line` today: PostGIS geodesic distance, with times from a
 1.35 detour factor at 18 km/h). Phase 5 adds road distances behind the
 same interface.
 
+### Live tracking (staff)
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | `/live` | `?date=`. Every route of the day: driver, vehicle, last `location` (with `age_s`), `stops` with `eta` and `eta_minutes`, and `eta_from` (`driver` when based on a position from the last 15 minutes, else `first_stop`) |
+| GET | `/live/tracking-quality` | `?date=`. Per driver: points received against expected (one per 30 s), `coverage`, gaps over 90 s, `longest_gap_s`, gap minutes in total and while the app was hidden, points sent late from the phone's queue |
+| GET | `/sms` | `?limit=`. The SMS outbox: every message sent or logged, with `provider` (`log` or `termii`) and `status` (`logged`, `sent`, `failed`) |
+| POST | `/orders/:id/send-tracking` | Texts the customer their tracking link now |
+
+`GET /orders/:id` also returns `tracking_url` and the order's `sms`.
+
+WebSocket `/ws?token=<staff JWT>` (through the web app: `/api/ws`). Events,
+sent after the change has been committed:
+
+- `location`: `driver_id, route_id, location, recorded_at, eta` (fresh ETAs for that route)
+- `stop`: `route_id, stop_id, order_id, action, route_status`
+- `route`: `route_id` or `route_date` (planned, edited, deleted, or an optimized plan accepted)
+- `orders`: an order was created, edited or cancelled
+
+The socket closes with code 4001 when the token expires.
+
+### Driver locations (driver)
+
+| Method | Path | Body |
+| --- | --- | --- |
+| POST | /driver/locations | `points: [{ lat, lng, recorded_at, accuracy_m?, speed_mps?, heading_deg?, app_visible? }]`, up to 500. Points older than 48 hours or in the future are ignored; a repeated (driver, `recorded_at`) is a no-op. Replies `{ accepted }` |
+
+### Public (no login)
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| GET | /public/track/:token | The customer's view of one order: first name, status, dropoff address, window, ETA, timeline, the driver's first name and vehicle, and the driver's position only while on the way to this customer and under 10 minutes old. 30 requests a minute per client and link |
+
+### Customer SMS
+
+Sent automatically once per order when the driver starts the trip to the
+dropoff (`en_route`) and when it is delivered (`delivered`), plus by hand.
+`sms` in `GET /settings` and `PUT /settings`: `provider` (`log` or
+`termii`), `base_url` (from the Termii dashboard), `api_key` (write-only,
+stored encrypted, a masked hint comes back), `sender_id`, `channel` (`dnd`
+for transactional texts, or `generic`), `public_app_url` (the address in
+tracking links) and `company_name`. `POST /settings/sms/test { to }` sends
+one test message. Termii receives `{ api_key, to: "234...", from, sms,
+type: "plain", channel }` at `{base_url}/api/sms/send`.
+
 ### Settings
 
 | Method | Path | Who | Notes |

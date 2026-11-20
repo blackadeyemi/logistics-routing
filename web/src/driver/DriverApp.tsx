@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useLocationSharing } from './tracking';
 import { Icon } from '../components/Icon';
 import { AppearanceControls, ErrorAlert, Mark, StopBadge, useClickOutside, useOnline } from '../components/ui';
 import { ApiError, driverApi, tokens } from '../lib/api';
@@ -119,6 +120,7 @@ function DriverDay({ me, onLogout }: { me: DriverInfo; onLogout: () => void }) {
   const menuRef = useClickOutside<HTMLDivElement>(menuOpen, () => setMenuOpen(false));
   const install = useInstallPrompt();
   const running = useRef(false);
+  const sharing = useLocationSharing(route);
 
   const runSync = useCallback(async () => {
     if (running.current) return;
@@ -209,6 +211,20 @@ function DriverDay({ me, onLogout }: { me: DriverInfo; onLogout: () => void }) {
             ? <span>Sending {pending} update{pending > 1 ? 's' : ''}…</span>
             : <span>Up to date{syncedAt && ` · ${fmtTime(syncedAt)}`}</span>}
       </div>
+      {sharing.active && sharing.state !== 'denied' && (
+        <div className={`location-strip ${sharing.state}`}>
+          <span className="location-dot" />
+          {sharing.state === 'on'
+            ? <span>Sharing your location with dispatch{sharing.queued > 0 ? ` · ${sharing.queued} point${sharing.queued > 1 ? 's' : ''} waiting to send` : ''}</span>
+            : <span>Finding your location…</span>}
+        </div>
+      )}
+      {sharing.state === 'denied' && (
+        <div className="location-strip denied">
+          <Icon name="alert" size={15} />
+          <span>Location is blocked. Allow it for this app in your phone’s browser settings so dispatch can see where you are.</span>
+        </div>
+      )}
 
       <main className="driver-main">
         {notices.map((n, i) => (
@@ -234,6 +250,13 @@ function DriverDay({ me, onLogout }: { me: DriverInfo; onLogout: () => void }) {
               </div>
               <div className="progress grow"><div className="progress-fill" style={{ width: `${total ? (done.length / total) * 100 : 0}%` }} /></div>
             </div>
+
+            {sharing.canStart && sharing.state !== 'unsupported' && sharing.state !== 'denied' && (
+              <div className="card card-pad share-card">
+                <p className="mb-0">Share your location so dispatch can follow your route and give customers an arrival time. It stops when your route is complete.</p>
+                <button className="btn btn-primary btn-lg btn-block" onClick={sharing.start}><Icon name="navigate" /> Share my location</button>
+              </div>
+            )}
 
             {route.status === 'completed' && (
               <div className="dash-allclear mb-3"><Icon name="checkCircle" /> Route complete. Well done.</div>

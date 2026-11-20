@@ -6,13 +6,16 @@ import { StaffAuthProvider } from './lib/auth';
 import { Dashboard } from './pages/Dashboard';
 import { Drivers } from './pages/Drivers';
 import { Knowledge } from './pages/Knowledge';
+import { Live } from './pages/Live';
 import { Login } from './pages/Login';
+import { Messages } from './pages/Messages';
 import { Optimize } from './pages/Optimize';
 import { OrderDetail } from './pages/OrderDetail';
 import { Orders } from './pages/Orders';
 import { RoutePlanner } from './pages/RoutePlanner';
 import { RoutesPage } from './pages/Routes';
 import { Settings } from './pages/Settings';
+import { Track } from './pages/Track';
 import { Users } from './pages/Users';
 import { Vehicles } from './pages/Vehicles';
 
@@ -22,12 +25,16 @@ export function App() {
       <ProgressBar />
       <Routes>
         <Route path="/driver/*" element={<DriverApp />} />
+        {/* Public: the customer's tracking page, opened from their SMS. */}
+        <Route path="/track/:token" element={<Track />} />
         <Route path="*" element={
           <StaffAuthProvider>
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route element={<AdminLayout />}>
                 <Route index element={<Dashboard />} />
+                <Route path="live" element={<Live />} />
+                <Route path="messages" element={<Messages />} />
                 <Route path="orders" element={<Orders />} />
                 <Route path="orders/:id" element={<OrderDetail />} />
                 <Route path="routes" element={<RoutesPage />} />

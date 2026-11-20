@@ -18,7 +18,7 @@ export function useMapsEnabled() {
   return on;
 }
 
-function useDarkTheme() {
+export function useDarkTheme() {
   const read = () => document.documentElement.getAttribute('data-theme') === 'dark';
   const [dark, setDark] = useState(read);
   useEffect(() => {

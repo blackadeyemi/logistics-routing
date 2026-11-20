@@ -15,6 +15,8 @@ const { z, parse } = require('../validation');
 const { requireAuth, STAFF } = require('../auth');
 const { encrypt, hint, canEncrypt } = require('../secrets');
 const { aiConfig, callAi, AI_KEYS } = require('../ai');
+const { smsConfig, sendTermii, SMS_KEYS } = require('../sms');
+const { phone } = require('../validation');
 
 const router = express.Router();
 
@@ -31,7 +33,10 @@ async function rowsFor(keys) {
 }
 
 async function readSettings() {
-  const by = await rowsFor([...Object.values(MAPS), ...Object.values(AI_KEYS)]);
+  const by = await rowsFor([...Object.values(MAPS), ...Object.values(AI_KEYS), ...Object.values(SMS_KEYS)]);
+  const sms = await smsConfig();
+  const smsRow = [SMS_KEYS.provider, SMS_KEYS.apiKey, SMS_KEYS.baseUrl, SMS_KEYS.senderId].map((k) => by[k]).filter(Boolean)
+    .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
   const mapsKey = by[MAPS.mapsKey];
   const ai = await aiConfig();
   const aiRow = by[AI_KEYS.apiKey] ?? by[AI_KEYS.model];
@@ -53,6 +58,22 @@ async function readSettings() {
       updated_at: aiRow?.updated_at ?? null,
       updated_by: aiRow?.updated_by ?? null,
     },
+    // The Termii key is a server secret: only a masked hint comes back.
+    sms: {
+      provider: sms.provider,
+      base_url: sms.baseUrl,
+      sender_id: sms.senderId,
+      channel: sms.channel,
+      api_key_set: !!sms.apiKey,
+      api_key_hint: sms.apiKey ? `${sms.apiKey.slice(0, 4)}…${sms.apiKey.slice(-4)}` : null,
+      key_source: sms.keySource,
+      key_unreadable: sms.keyUnreadable,
+      public_app_url: sms.publicUrl,
+      company_name: sms.company,
+      can_save_secrets: canEncrypt(),
+      updated_at: smsRow?.updated_at ?? null,
+      updated_by: smsRow?.updated_by ?? null,
+    },
   };
 }
 
@@ -72,6 +93,15 @@ const updateSettings = z.object({
     map_id: z.string().trim().max(100)
       .refine((v) => v === '' || /^[A-Za-z0-9_-]+$/.test(v), 'Letters, digits, dashes and underscores only')
       .optional(),
+  }).strict().optional(),
+  sms: z.object({
+    provider: z.enum(['log', 'termii']).optional(),
+    base_url: z.string().trim().max(200).refine((v) => v === '' || /^https:\/\/[a-z0-9.-]+(:\d+)?\/?$/i.test(v), 'Use the https base URL from your Termii dashboard, for example https://v3.api.termii.com').optional(),
+    api_key: z.string().trim().max(300).refine((v) => v === '' || /^[A-Za-z0-9_\-$]{10,}$/.test(v), 'Does not look like a Termii API key').optional(),
+    sender_id: z.string().trim().max(11).refine((v) => v === '' || /^[A-Za-z0-9 ]{3,11}$/.test(v), 'Sender IDs are 3 to 11 letters or digits').optional(),
+    channel: z.enum(['dnd', 'generic']).optional(),
+    public_app_url: z.string().trim().max(200).refine((v) => v === '' || /^https?:\/\/[^\s/]+(\/[^\s]*)?$/.test(v), 'A full address, for example https://track.yourcompany.ng').optional(),
+    company_name: z.string().trim().max(40).optional(),
   }).strict().optional(),
   ai: z.object({
     api_key: anthropicKey.optional(),
@@ -97,9 +127,14 @@ router.put('/', requireAuth('admin'), asyncHandler(async (req, res) => {
   const body = parse(updateSettings, req.body);
   const gm = body.google_maps ?? {};
   const ai = body.ai ?? {};
+  const sms = body.sms ?? {};
   // Encrypt first so a missing encryption key fails before anything is written.
   const encryptedKey = ai.api_key ? encrypt(ai.api_key) : ai.api_key;
+  const encryptedSms = sms.api_key ? encrypt(sms.api_key) : sms.api_key;
   const changes = [
+    [SMS_KEYS.provider, sms.provider], [SMS_KEYS.baseUrl, sms.base_url?.replace(/\/$/, '')], [SMS_KEYS.apiKey, encryptedSms],
+    [SMS_KEYS.senderId, sms.sender_id], [SMS_KEYS.channel, sms.channel], [SMS_KEYS.publicUrl, sms.public_app_url?.replace(/\/$/, '')],
+    [SMS_KEYS.company, sms.company_name],
     [MAPS.mapsKey, gm.api_key], [MAPS.mapId, gm.map_id],
     [AI_KEYS.apiKey, encryptedKey], [AI_KEYS.model, ai.model],
   ].filter(([, v]) => v !== undefined);
@@ -118,6 +153,19 @@ router.post('/ai/check', requireAuth('admin'), asyncHandler(async (req, res) => 
   }
   const result = await callAi('/ai/models', {}, { apiKey, timeoutMs: 20_000 });
   res.json(result);
+}));
+
+// POST /settings/sms/test { to } : send one test SMS with the saved Termii
+// settings, so an admin can check them before customers rely on them.
+router.post('/sms/test', requireAuth('admin'), asyncHandler(async (req, res) => {
+  const { to } = parse(z.object({ to: phone }).strict(), req.body);
+  const cfg = await smsConfig();
+  if (cfg.provider !== 'termii') {
+    res.status(409).json({ error: 'Choose Termii as the SMS provider and save before sending a test' });
+    return;
+  }
+  const result = await sendTermii(cfg, to, `Test message from ${cfg.company}: SMS is set up.`);
+  res.status(result.status === 'sent' ? 200 : 502).json(result.status === 'sent' ? { ok: true, message_id: result.providerMessageId } : { error: result.error });
 }));
 
 module.exports = router;

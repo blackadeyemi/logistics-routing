@@ -9,6 +9,7 @@ import { configureMaps, loadedMapsKey } from '../lib/maps';
 import type { AppSettings } from '../lib/types';
 import { useLoad } from '../lib/useLoad';
 import { AiSettings } from './AiSettings';
+import { SmsSettings } from './SmsSettings';
 
 const ENV_KEY = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined)?.trim() ?? '';
 
@@ -54,6 +55,7 @@ export function Settings() {
         <div className="settings-stack">
           <AiSettings settings={data} onSaved={reload} />
           <MapsSettings settings={data} onSaved={reload} />
+          <SmsSettings settings={data} onSaved={reload} />
         </div>
       )}
     </>

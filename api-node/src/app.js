@@ -31,6 +31,9 @@ app.use('/ai', require('./routes/ai'));
 app.use('/ai', require('./routes/copilot'));
 app.use('/knowledge', require('./routes/knowledge'));
 app.use('/optimizations', require('./routes/optimizations'));
+app.use('/live', require('./routes/live'));
+app.use('/sms', require('./routes/sms'));
+app.use('/public', require('./routes/public'));
 
 app.use(notFound);
 app.use(errorHandler);

@@ -5,6 +5,11 @@ const { z, parse, id, idParam, isoDate } = require('../validation');
 const { requireAuth, STAFF } = require('../auth');
 const { staffActor, recordEvent } = require('../events');
 const { ROUTE_SELECT, getRoute, setRouteStops, applyStopAction } = require('../dispatch');
+const { publish } = require('../realtime');
+const { afterStopUpdate } = require('../stopEvents');
+
+// Tell connected dashboards a route changed (after the commit).
+const routeChanged = (route) => route && publish({ type: 'route', route_id: Number(route.id), route_date: route.route_date });
 
 const router = express.Router();
 router.use(requireAuth(...STAFF));
@@ -51,6 +56,7 @@ router.post('/', asyncHandler(async (req, res) => {
     );
     return getRoute(db, rows[0].id);
   });
+  routeChanged(route);
   res.status(201).json(route);
 }));
 
@@ -72,6 +78,7 @@ router.patch('/:id', asyncHandler(async (req, res) => {
     );
     return getRoute(db, routeId);
   });
+  routeChanged(route);
   res.json(route);
 }));
 
@@ -84,11 +91,10 @@ router.put('/:id/stops', asyncHandler(async (req, res) => {
     await setRouteStops(db, routeId, stopIds, staffActor(req));
     return getRoute(db, routeId);
   });
+  routeChanged(route);
   res.json(route);
 }));
 
-// Only routes where no stop has been started can be deleted. Their orders
-// go back to pending.
 // POST /routes/stops/:id/status { action } : a dispatcher records a stop
 // update for the driver, for example when the driver phones in. Same
 // rules as the driver app; the event is recorded as done by dispatch.
@@ -97,11 +103,14 @@ router.post('/stops/:id/status', asyncHandler(async (req, res) => {
   const body = parse(z.object({ action: z.enum(['arrive', 'start', 'complete', 'skip']) }).strict(), req.body);
   const route = await withTransaction(async (db) => {
     const r = await applyStopAction(db, stopId, body, { type: 'user', id: req.user.id });
-    return getRoute(db, r.routeId);
+    return { replayed: r.replayed, route: await getRoute(db, r.routeId) };
   });
-  res.json(route);
+  afterStopUpdate(route.route, stopId, body.action, route.replayed);
+  res.json(route.route);
 }));
 
+// Only routes where no stop has been started can be deleted. Their orders
+// go back to pending.
 router.delete('/:id', asyncHandler(async (req, res) => {
   const routeId = idParam(req);
   await withTransaction(async (db) => {
@@ -124,6 +133,7 @@ router.delete('/:id', asyncHandler(async (req, res) => {
     await db.query('UPDATE stops SET route_id = NULL, sequence_number = NULL WHERE route_id = $1', [routeId]);
     await db.query('DELETE FROM routes WHERE id = $1', [routeId]);
   });
+  publish({ type: 'route', route_id: routeId, deleted: true });
   res.status(204).end();
 }));
 

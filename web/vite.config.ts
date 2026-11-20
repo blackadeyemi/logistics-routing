@@ -53,14 +53,14 @@ export default defineConfig(({ mode }) => {
       // Laragon proxies http://logistics-routing.test to this server.
       allowedHosts: ['logistics-routing.test'],
       proxy: {
-        '/api': { target: apiTarget, changeOrigin: true, rewrite: (p) => p.replace(/^\/api/, '') },
+        '/api': { target: apiTarget, changeOrigin: true, ws: true, rewrite: (p) => p.replace(/^\/api/, '') },
       },
     },
     preview: {
       host: true,
       port: 4173,
       proxy: {
-        '/api': { target: apiTarget, changeOrigin: true, rewrite: (p) => p.replace(/^\/api/, '') },
+        '/api': { target: apiTarget, changeOrigin: true, ws: true, rewrite: (p) => p.replace(/^\/api/, '') },
       },
     },
   };

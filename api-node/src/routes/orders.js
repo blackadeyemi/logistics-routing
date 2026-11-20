@@ -7,6 +7,8 @@ const { recordEvent, staffActor } = require('../events');
 const { pointSql, latLngSql, toLocation, lngLat } = require('../geo');
 const { resequenceRoute } = require('../dispatch');
 const { indexLater, indexStopNotes } = require('../knowledge');
+const { publish } = require('../realtime');
+const { smsConfig, sendOrderSms, trackingUrl } = require('../sms');
 
 const router = express.Router();
 router.use(requireAuth(...STAFF));
@@ -17,7 +19,7 @@ const SELECT = `
   SELECT o.id, o.customer_name, o.customer_phone,
          o.pickup_address, ${latLngSql('o.pickup_location', 'pickup')},
          o.dropoff_address, ${latLngSql('o.dropoff_location', 'dropoff')},
-         o.status, o.created_at, o.weight_kg,
+         o.status, o.created_at, o.weight_kg, o.tracking_token,
          to_char(o.dropoff_after, 'HH24:MI') AS dropoff_after, to_char(o.dropoff_before, 'HH24:MI') AS dropoff_before,
          ps.id AS pickup_stop_id, ds.id AS dropoff_stop_id, ps.route_id,
          ps.notes AS pickup_notes, ds.notes AS dropoff_notes
@@ -37,6 +39,7 @@ function shape(r) {
     pickup_notes: r.pickup_notes,
     dropoff_notes: r.dropoff_notes,
     weight_kg: r.weight_kg,
+    tracking_token: r.tracking_token,
     dropoff_after: r.dropoff_after,
     dropoff_before: r.dropoff_before,
     status: r.status,
@@ -127,6 +130,13 @@ router.get('/', asyncHandler(async (req, res) => {
 router.get('/:id', asyncHandler(async (req, res) => {
   const orderId = idParam(req);
   const order = await getOrder(pool, orderId);
+  const cfg = await smsConfig();
+  const { rows: sms } = await pool.query(
+    'SELECT id, to_phone, body, reason, provider, status, error, created_at FROM sms_messages WHERE order_id = $1 ORDER BY id',
+    [orderId],
+  );
+  order.tracking_url = trackingUrl(cfg, order.tracking_token);
+  order.sms = sms;
   const { rows: events } = await pool.query(
     `SELECT id, stop_id, event_type, actor_type, actor_id, occurred_at, created_at
      FROM order_events WHERE order_id = $1 ORDER BY occurred_at, id`,
@@ -163,6 +173,7 @@ router.post('/', asyncHandler(async (req, res) => {
     return getOrder(db, orderId);
   });
   if (order.pickup_notes || order.dropoff_notes) indexLater(indexStopNotes, order.id);
+  publish({ type: 'orders', order_id: order.id });
   res.status(201).json(order);
 }));
 
@@ -228,6 +239,7 @@ router.patch('/:id', asyncHandler(async (req, res) => {
   });
   // Addresses are part of a note's chunk, so any change re-indexes.
   if ('pickup_notes' in b || 'dropoff_notes' in b || 'pickup_address' in b || 'dropoff_address' in b) indexLater(indexStopNotes, orderId);
+  publish({ type: 'orders', order_id: orderId });
   res.json(order);
 }));
 
@@ -257,7 +269,19 @@ router.post('/:id/cancel', asyncHandler(async (req, res) => {
     }
     return getOrder(db, orderId);
   });
+  publish({ type: 'orders', order_id: orderId });
+  if (order.route_id) publish({ type: 'route', route_id: Number(order.route_id) });
   res.json(order);
+}));
+
+// POST /orders/:id/send-tracking : text the customer their tracking link
+// now. Goes through the configured SMS provider, or the outbox.
+router.post('/:id/send-tracking', asyncHandler(async (req, res) => {
+  const orderId = idParam(req);
+  const order = await getOrder(pool, orderId);
+  if (order.status === 'cancelled') throw new HttpError(409, 'This order was cancelled');
+  const msg = await sendOrderSms(orderId, 'manual', req.user.id);
+  res.status(201).json(msg);
 }));
 
 module.exports = router;
