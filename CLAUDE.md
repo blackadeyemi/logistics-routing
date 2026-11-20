@@ -60,10 +60,11 @@ visual language or a CSS framework.
   `npm run build && npm run preview` tests the real service worker, which
   is off in dev.
 
-## Current phase: Phase 4 (exit criteria met)
+## Current phase: Phase 4 (complete)
 Phases 1 to 4 are complete (exit criteria met, evals and benchmarks in the
-README). Still to do in Phase 4: measure background location loss on a
-real phone. Phase 5 starts only when the user says so.
+README). Background location on a real phone was measured: about 10%
+coverage while the driver app is off screen, 100% on screen (README).
+Phase 5 starts only when the user says so.
 Build only what the current phase lists. Do not start work from a later
 phase until told to move to it. Each phase is done when its exit criteria
 are met.

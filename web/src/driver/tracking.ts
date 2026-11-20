@@ -135,9 +135,29 @@ export function useLocationSharing(route: Route | null) {
       },
       { enableHighAccuracy: true, maximumAge: 15_000, timeout: 60_000 },
     );
+    // A phone that is not moving often stops producing new fixes, so ask for
+    // a fresh one when the last is old. Without this a parked phone would
+    // look like lost tracking even with the screen on.
     const tick = window.setInterval(() => {
-      record();
-      void flush();
+      const last = fix.current;
+      if (last && Date.now() - last.timestamp < INTERVAL_MS - 5_000) {
+        record();
+        void flush();
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          fix.current = pos;
+          setLastFix(pos);
+          record();
+          void flush();
+        },
+        () => {
+          record();
+          void flush();
+        },
+        { enableHighAccuracy: true, maximumAge: 10_000, timeout: 20_000 },
+      );
     }, INTERVAL_MS);
     const onVisible = () => {
       if (document.visibilityState === 'visible') {

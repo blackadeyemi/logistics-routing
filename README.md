@@ -154,7 +154,7 @@ flowchart LR
 | 1. Manual dispatch | Auth, CRUD, manual routes, offline driver PWA, Lagos seed data | Done, tested on a Pixel 7 Pro (install, offline queue, sync) |
 | 2. AI layer | WhatsApp message to validated order (Pydantic structured output), dispatch copilot agent with tool calls and human confirmation of every write, RAG over driver notes and SOPs with pgvector, evals in the repo | Done, evals below |
 | 3. Route optimization | OR-Tools vehicle routing with pickup before dropoff, capacity and time windows, compared against the manual plan | Done, benchmark below |
-| 4. Live tracking | Driver location, WebSocket updates, live map, ETAs, customer SMS tracking link | Done; background-location measurement on a real phone pending |
+| 4. Live tracking | Driver location, WebSocket updates, live map, ETAs, customer SMS tracking link | Done, background location measured on a real phone below |
 | 5. Traffic-aware routing | Road distances and durations, Lagos rush-hour profiles | Planned |
 | 6. Multi-tenant SaaS | Row level security per company, Paystack billing | Planned |
 | 7. Native driver app | React Native (Expo) for background location and push | Planned |
@@ -387,6 +387,30 @@ straight lines at Lagos traffic speed until Phase 5 brings road distances.
 docker compose exec api-node npm run seed -- --reset --manual-day
 docker compose exec service-python python -m evals.run_optimizer
 ```
+
+### Background location on a real phone
+
+Phase 4 asked how much the browser costs us when the driver app is not on
+screen. Measured on 20 November 2026 on a Pixel 7 Pro (Android 17, Chrome
+157), with the driver app installed from the browser and sharing location
+every 30 seconds. Phase C ran on battery, because a charging phone is not
+put to sleep the same way.
+
+| Phase | Duration | Positions |
+| --- | --- | --- |
+| A. App open, screen on | 5.8 min | every 30 s, none missing |
+| B. Another app in front, screen on | 4.2 min | 2 in the first 16 s, then none for 3 min 54 s |
+| C. Screen off, on battery | 10.7 min | 1 as the screen went off, then none for 10 min 44 s |
+| D. Back in the app | 2 min | every 30 s again |
+
+On screen, coverage was 100% at 3 to 13 m accuracy. Off screen it was
+about 10%, and every point recorded came within seconds of leaving the
+app. Nothing was lost: the point taken while unplugged was queued on the
+phone and arrived 11 minutes later. So a driver who locks the phone or
+answers WhatsApp drops off the live map, and customers' ETAs stop moving,
+until the app is opened again. That is the case for Phase 7's native app
+with background location. The same numbers show in the dashboard's
+tracking-quality table.
 
 ## Repository layout
 
