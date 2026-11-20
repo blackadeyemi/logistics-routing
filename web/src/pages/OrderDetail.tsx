@@ -7,6 +7,7 @@ import { ApiError, staffApi } from '../lib/api';
 import { EVENT_LABEL, fmtDateTime, fmtPhone, haversineKm, mapsUrl } from '../lib/format';
 import type { OrderDetail as Detail } from '../lib/types';
 import { useLoad } from '../lib/useLoad';
+import { DELIVERY } from './Messages';
 import { OrderForm } from './OrderForm';
 
 const EVENT_TONE: Record<string, string> = {
@@ -141,7 +142,7 @@ export function OrderDetail() {
             <ul className="sms-list">
               {order.sms.map((m) => (
                 <li key={m.id}>
-                  <span className="text-xs text-muted">{fmtDateTime(m.created_at)} · {m.status === 'logged' ? 'outbox only, SMS not set up' : m.status}</span>
+                  <span className="text-xs text-muted">{fmtDateTime(m.created_at)} · {m.status === 'logged' ? 'outbox only, SMS not set up' : m.status === 'sent' ? (m.delivery_status ? (DELIVERY[m.delivery_status]?.label ?? m.delivery_status) : 'accepted by provider') : m.status}</span>
                   <span className="text-sm">{m.body}</span>
                   {m.error && <span className="text-xs text-danger">{m.error}</span>}
                 </li>

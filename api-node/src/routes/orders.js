@@ -132,7 +132,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
   const order = await getOrder(pool, orderId);
   const cfg = await smsConfig();
   const { rows: sms } = await pool.query(
-    'SELECT id, to_phone, body, reason, provider, status, error, created_at FROM sms_messages WHERE order_id = $1 ORDER BY id',
+    'SELECT id, to_phone, body, reason, provider, status, error, delivery_status, delivery_at, created_at FROM sms_messages WHERE order_id = $1 ORDER BY id',
     [orderId],
   );
   order.tracking_url = trackingUrl(cfg, order.tracking_token);

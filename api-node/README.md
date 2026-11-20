@@ -284,6 +284,7 @@ same interface.
 | GET | `/live/tracking-quality` | `?date=`. Per driver: points received against expected (one per 30 s), `coverage`, gaps over 90 s, `longest_gap_s`, gap minutes in total and while the app was hidden, points sent late from the phone's queue |
 | GET | `/sms` | `?limit=`. The SMS outbox: every message sent or logged, with `provider` (`log` or `termii`) and `status` (`logged`, `sent`, `failed`) |
 | POST | `/orders/:id/send-tracking` | Texts the customer their tracking link now |
+| POST | `/sms/check-delivery` | Asks Brevo now what happened to accepted texts (also done automatically every 2 minutes for 48 hours). Replies `{ checked, updated }` |
 
 `GET /orders/:id` also returns `tracking_url` and the order's `sms`.
 
@@ -329,6 +330,13 @@ provider.
   with an `api-key` header, and answers 201 with `messageId`. Brevo needs a
   sender registered for Nigeria; Nigerian networks reject unregistered and
   numeric senders.
+- `status` says whether the provider took a text (`sent` means accepted,
+  not delivered). For Brevo, `delivery_status` then records what happened:
+  `delivered`, `rejected`, `blocked`, `hard_bounce`, `soft_bounce`,
+  `skipped`, `unsubscribed`, or an interim `sent`/`accepted`. A WebSocket
+  `sms` event tells dashboards when results change. Diagnostics:
+  `node scripts/brevo-sms-events.js [days]` lists Brevo's recent SMS
+  events without printing the key.
 
 ### Settings
 

@@ -372,10 +372,13 @@ export interface SmsMessage {
   order_id: number | null;
   to_phone: string;
   body: string;
-  reason: 'en_route' | 'delivered' | 'manual';
+  reason: 'en_route' | 'delivered' | 'manual' | 'test';
   provider: 'log' | 'termii' | 'brevo';
   status: 'logged' | 'sent' | 'failed';
   error: string | null;
+  /** What the provider reported after accepting it (Brevo): delivered, rejected, blocked, hard_bounce... */
+  delivery_status?: string | null;
+  delivery_at?: string | null;
   created_at: string;
   created_by?: string | null;
   customer_name?: string | null;

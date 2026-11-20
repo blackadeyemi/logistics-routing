@@ -174,7 +174,14 @@ router.post('/sms/test', requireAuth('admin'), asyncHandler(async (req, res) => 
     res.status(409).json({ error: 'Choose Termii or Brevo as the SMS provider and save before sending a test' });
     return;
   }
-  const result = await deliver(cfg, to, `Test message from ${cfg.company || 'dispatch'}: SMS is set up.`, 'test');
+  const body = `Test message from ${cfg.company || 'dispatch'}: SMS is set up.`;
+  const result = await deliver(cfg, to, body, 'test');
+  // Recorded like any other text, so the outbox shows what the provider said.
+  await pool.query(
+    `INSERT INTO sms_messages (to_phone, body, reason, provider, status, provider_message_id, error, created_by)
+     VALUES ($1, $2, 'test', $3, $4, $5, $6, $7)`,
+    [to, body, cfg.provider, result.status, result.providerMessageId ?? null, result.error ?? null, req.user.id],
+  );
   res.status(result.status === 'sent' ? 200 : 502).json(result.status === 'sent' ? { ok: true, message_id: result.providerMessageId } : { error: result.error });
 }));
 

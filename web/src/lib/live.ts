@@ -11,7 +11,8 @@ export type LiveEvent =
   | { type: 'location'; driver_id: number; route_id: number | null; location: { lat: number; lng: number; accuracy_m: number | null }; recorded_at: string; eta: { stop_id: number; eta: string; minutes: number }[] }
   | { type: 'stop'; route_id: number; stop_id: number; order_id: number | null; action: string; route_status: string }
   | { type: 'route'; route_id?: number; route_date?: string; deleted?: boolean }
-  | { type: 'orders'; order_id?: number };
+  | { type: 'orders'; order_id?: number }
+  | { type: 'sms'; updated: number };
 
 export type LiveStatus = 'connecting' | 'live' | 'offline';
 

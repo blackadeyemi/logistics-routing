@@ -140,4 +140,96 @@ function notifyLater(orderId, reason) {
   });
 }
 
-module.exports = { smsConfig, sendOrderSms, notifyLater, trackingUrl, deliver, SMS_KEYS: KEYS, sendTermii, sendBrevo };
+// ---- Delivery results (Brevo) ---------------------------------------
+//
+// Brevo accepts a text at once and decides later: it can still reject it
+// (no registered sender, no credits) or the network can fail to deliver.
+// syncBrevoDelivery() asks Brevo's events API what happened to the texts
+// it accepted in the last 48 hours and records the latest result. Results
+// that cannot change again stop the checking.
+const FINAL = new Set(['delivered', 'rejected', 'blocked', 'hardBounces', 'skipped', 'unsubscribed']);
+// Readable names for the outbox; anything else is shown as Brevo sends it.
+const DELIVERY_NAMES = { hardBounces: 'hard_bounce', softBounces: 'soft_bounce', replies: 'replied' };
+
+async function syncBrevoDelivery() {
+  const cfg = await smsConfig();
+  if (!cfg.brevoApiKey) return { checked: 0, updated: 0 };
+  const { rows: open } = await pool.query(
+    `SELECT id, provider_message_id, created_at FROM sms_messages
+     WHERE provider = 'brevo' AND status = 'sent' AND provider_message_id IS NOT NULL
+       AND created_at > now() - interval '48 hours'
+       AND (delivery_status IS NULL OR delivery_status NOT IN ('delivered', 'rejected', 'blocked', 'hard_bounce', 'skipped', 'unsubscribed'))`,
+  );
+  if (!open.length) return { checked: 0, updated: 0 };
+  const day = (d) => new Date(d).toISOString().slice(0, 10);
+  const start = day(Math.min(...open.map((m) => new Date(m.created_at).getTime())));
+  const end = day(Date.now());
+  // Brevo pages events; 300 per check is plenty for a courier's day.
+  const events = [];
+  for (let offset = 0; offset < 300; offset += 100) {
+    const res = await fetch(
+      `${cfg.brevoUrl}/v3/transactionalSMS/statistics/events?limit=100&offset=${offset}&sort=desc&startDate=${start}&endDate=${end}`,
+      { headers: { 'api-key': cfg.brevoApiKey, Accept: 'application/json' }, signal: AbortSignal.timeout(15_000) },
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(`Brevo ${res.status}: ${data.code ?? ''} ${data.message ?? ''}`.trim());
+    events.push(...(data.events ?? []));
+    if ((data.events ?? []).length < 100) break;
+  }
+  // The latest event per message wins, but a final one is never replaced.
+  const latest = new Map();
+  for (const e of events) {
+    const id = String(e.messageId);
+    const prev = latest.get(id);
+    const later = !prev || new Date(e.date) > new Date(prev.date);
+    let take;
+    if (!prev) take = true;
+    else if (FINAL.has(prev.event)) take = FINAL.has(e.event) && later; // a final result only gives way to a later final one
+    else take = FINAL.has(e.event) || later;
+    if (take) latest.set(id, e);
+  }
+  let updated = 0;
+  for (const m of open) {
+    const e = latest.get(String(m.provider_message_id));
+    if (!e) {
+      await pool.query('UPDATE sms_messages SET delivery_checked_at = now() WHERE id = $1', [m.id]);
+      continue;
+    }
+    const status = DELIVERY_NAMES[e.event] ?? e.event;
+    const { rowCount } = await pool.query(
+      `UPDATE sms_messages SET delivery_status = $2, delivery_at = $3, delivery_checked_at = now()
+       WHERE id = $1 AND delivery_status IS DISTINCT FROM $2`,
+      [m.id, status, e.date],
+    );
+    if (!rowCount) await pool.query('UPDATE sms_messages SET delivery_checked_at = now() WHERE id = $1', [m.id]);
+    updated += rowCount;
+  }
+  return { checked: open.length, updated };
+}
+
+// Every 2 minutes while api-node runs. Failures (Brevo down, key removed)
+// are logged and retried next time; they never affect the rest of the app.
+function startDeliverySync(intervalMs = 120_000, onUpdate = () => {}) {
+  let running = false;
+  const tick = async () => {
+    if (running) return;
+    running = true;
+    try {
+      const r = await syncBrevoDelivery();
+      if (r.updated) onUpdate(r);
+    } catch (err) {
+      console.warn(`SMS delivery check failed: ${err.message}`);
+    } finally {
+      running = false;
+    }
+  };
+  const t = setInterval(tick, intervalMs);
+  t.unref();
+  setTimeout(tick, 5_000).unref();
+  return () => clearInterval(t);
+}
+
+module.exports = {
+  smsConfig, sendOrderSms, notifyLater, trackingUrl, deliver, SMS_KEYS: KEYS, sendTermii, sendBrevo,
+  syncBrevoDelivery, startDeliverySync,
+};

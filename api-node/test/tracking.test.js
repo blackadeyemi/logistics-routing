@@ -23,8 +23,18 @@ before(async () => {
     let body = '';
     req.on('data', (c) => { body += c; });
     req.on('end', () => {
-      termiiCalls.push({ path: req.url, body: JSON.parse(body), headers: req.headers });
+      termiiCalls.push({ path: req.url, body: body ? JSON.parse(body) : null, headers: req.headers });
       res.setHeader('Content-Type', 'application/json');
+      // Brevo's events: the text was sent, then rejected (as on a real
+      // account without a registered sender).
+      if (req.url.startsWith('/v3/transactionalSMS/statistics/events')) {
+        const now = Date.now();
+        res.end(JSON.stringify({ events: [
+          { messageId: 1511882900176220, event: 'rejected', date: new Date(now - 1000).toISOString(), phoneNumber: '2348031110001' },
+          { messageId: 1511882900176220, event: 'sent', date: new Date(now - 5000).toISOString(), phoneNumber: '2348031110001' },
+        ] }));
+        return;
+      }
       // Answers like Brevo on Brevo's path, like Termii otherwise.
       if (req.url === '/v3/transactionalSMS/send') {
         res.statusCode = 201;
@@ -234,6 +244,18 @@ test('Brevo: the key is write-only and messages go out in Brevo\'s format', asyn
   assert.equal(call.body.sender, 'SwiftCour');
   assert.equal(call.body.type, 'transactional');
   assert.match(call.body.content, /track/);
+
+  // Brevo later rejects it: the check records that, and a final result sticks.
+  const check = await api.post('/sms/check-delivery').set(as(staff));
+  assert.equal(check.status, 200);
+  assert.equal(check.body.updated, 1);
+  const outbox = await api.get('/sms').set(as(staff));
+  const msg = outbox.body.messages.find((m) => m.provider_message_id === '1511882900176220');
+  assert.equal(msg.status, 'sent');
+  assert.equal(msg.delivery_status, 'rejected');
+  assert.ok(msg.delivery_at);
+  const again = await api.post('/sms/check-delivery').set(as(staff));
+  assert.equal(again.body.checked, 0, 'a rejected text is not checked again');
   delete process.env.BREVO_API_URL;
 });
 
