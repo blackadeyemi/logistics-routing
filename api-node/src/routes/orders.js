@@ -17,7 +17,8 @@ const SELECT = `
   SELECT o.id, o.customer_name, o.customer_phone,
          o.pickup_address, ${latLngSql('o.pickup_location', 'pickup')},
          o.dropoff_address, ${latLngSql('o.dropoff_location', 'dropoff')},
-         o.status, o.created_at,
+         o.status, o.created_at, o.weight_kg,
+         to_char(o.dropoff_after, 'HH24:MI') AS dropoff_after, to_char(o.dropoff_before, 'HH24:MI') AS dropoff_before,
          ps.id AS pickup_stop_id, ds.id AS dropoff_stop_id, ps.route_id,
          ps.notes AS pickup_notes, ds.notes AS dropoff_notes
   FROM orders o
@@ -35,6 +36,9 @@ function shape(r) {
     dropoff_location: toLocation(r.dropoff_lat, r.dropoff_lng),
     pickup_notes: r.pickup_notes,
     dropoff_notes: r.dropoff_notes,
+    weight_kg: r.weight_kg,
+    dropoff_after: r.dropoff_after,
+    dropoff_before: r.dropoff_before,
     status: r.status,
     route_id: r.route_id,
     pickup_stop_id: r.pickup_stop_id,
@@ -49,6 +53,10 @@ async function getOrder(db, orderId) {
   return shape(rows[0]);
 }
 
+const clockTime = z.string().trim().nullable()
+  .refine((v) => !v || /^([01]\d|2[0-3]):[0-5]\d$/.test(v), 'Use 24-hour time, for example 16:00')
+  .transform((v) => v || null);
+
 const fields = {
   customer_name: z.string().trim().min(1).max(255),
   customer_phone: phone,
@@ -59,7 +67,15 @@ const fields = {
   // Driver notes for each stop. Empty strings are stored as null.
   pickup_notes: z.string().trim().max(1000).nullable().transform((v) => v || null),
   dropoff_notes: z.string().trim().max(1000).nullable().transform((v) => v || null),
+  // For the optimizer: parcel weight against vehicle capacity, and an
+  // optional delivery window in Lagos time ("HH:MM", empty for none).
+  weight_kg: z.number().positive().max(5000),
+  dropoff_after: clockTime,
+  dropoff_before: clockTime,
 };
+
+const windowOk = (o) => !o.dropoff_after || !o.dropoff_before || o.dropoff_after < o.dropoff_before;
+const WINDOW_MESSAGE = { message: 'The window must end after it starts', path: ['dropoff_before'] };
 
 const createOrder = z.object({
   ...fields,
@@ -67,8 +83,11 @@ const createOrder = z.object({
   dropoff_location: location.optional().default(null),
   pickup_notes: fields.pickup_notes.optional().default(null),
   dropoff_notes: fields.dropoff_notes.optional().default(null),
-});
-const updateOrder = z.object(fields).partial();
+  weight_kg: fields.weight_kg.optional().default(1),
+  dropoff_after: fields.dropoff_after.optional().default(null),
+  dropoff_before: fields.dropoff_before.optional().default(null),
+}).refine(windowOk, WINDOW_MESSAGE);
+const updateOrder = z.object(fields).partial().refine(windowOk, WINDOW_MESSAGE);
 
 const listQuery = z.object({
   status: z.string().optional().transform((v, ctx) => {
@@ -121,12 +140,14 @@ router.post('/', asyncHandler(async (req, res) => {
   const order = await withTransaction(async (db) => {
     const { rows } = await db.query(
       `INSERT INTO orders (customer_name, customer_phone,
-         pickup_address, pickup_location, dropoff_address, dropoff_location)
-       VALUES ($1, $2, $3, ${pointSql('$4', '$5')}, $6, ${pointSql('$7', '$8')})
+         pickup_address, pickup_location, dropoff_address, dropoff_location,
+         weight_kg, dropoff_after, dropoff_before)
+       VALUES ($1, $2, $3, ${pointSql('$4', '$5')}, $6, ${pointSql('$7', '$8')}, $9, $10, $11)
        RETURNING id`,
       [b.customer_name, b.customer_phone,
         b.pickup_address, ...lngLat(b.pickup_location),
-        b.dropoff_address, ...lngLat(b.dropoff_location)],
+        b.dropoff_address, ...lngLat(b.dropoff_location),
+        b.weight_kg, b.dropoff_after, b.dropoff_before],
     );
     const orderId = rows[0].id;
     // Every order has exactly one pickup and one dropoff stop. They start
@@ -185,6 +206,17 @@ router.patch('/:id', asyncHandler(async (req, res) => {
        FROM orders o WHERE o.id = s.order_id AND o.id = $1`,
       [orderId],
     );
+    // Weight and window feed the optimizer; they can change until delivery.
+    if ('weight_kg' in b) await db.query('UPDATE orders SET weight_kg = $2 WHERE id = $1', [orderId, b.weight_kg]);
+    if ('dropoff_after' in b || 'dropoff_before' in b) {
+      const { rows: w } = await db.query(
+        `UPDATE orders SET dropoff_after = CASE WHEN $2::boolean THEN $3::time ELSE dropoff_after END,
+                           dropoff_before = CASE WHEN $4::boolean THEN $5::time ELSE dropoff_before END
+         WHERE id = $1 RETURNING dropoff_after < dropoff_before OR dropoff_after IS NULL OR dropoff_before IS NULL AS ok`,
+        [orderId, 'dropoff_after' in b, b.dropoff_after ?? null, 'dropoff_before' in b, b.dropoff_before ?? null],
+      );
+      if (!w[0].ok) throw new HttpError(400, 'The window must end after it starts');
+    }
     // Notes can change at any time, even mid-route: the driver sees the
     // update on their next refresh.
     for (const kind of ['pickup', 'dropoff']) {

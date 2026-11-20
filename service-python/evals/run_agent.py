@@ -130,7 +130,9 @@ def proposal_matches(spec: dict, p: dict, world: World) -> bool:
 
 
 def contains(text: str, term: str) -> bool:
-    return term.lower() in text.lower()
+    # Ignore Markdown emphasis: "still **pending**" contains "still pending".
+    plain = text.replace("**", "").replace("__", "")
+    return term.lower() in plain.lower()
 
 
 def run_check(check: dict, r: dict, world: World) -> tuple[str, bool, str]:
@@ -155,8 +157,14 @@ def run_check(check: dict, r: dict, world: World) -> tuple[str, bool, str]:
         plans = [p for p in props if p["tool"] == "assign_stops"]
         stops = [s for p in plans for s in p["arguments"]["stop_ids"]]
         want = world.stops(spec["orders"])
-        ok = sorted(stops) == sorted(want) and not any(p["arguments"]["driver_id"] == spec["exclude_driver"] for p in plans)
-        return kind, ok, f"{len(plans)} routes covering {len(set(stops))} of {len(want)} stops, drivers {[p['arguments']['driver_id'] for p in plans]}"
+        ok = bool(plans) and sorted(stops) == sorted(want) and not any(p["arguments"]["driver_id"] == spec["exclude_driver"] for p in plans)
+        # Equally right: the optimizer, told to keep that driver's route.
+        optimized = [p for p in props if p["tool"] == "propose_optimized_routes"
+                     and spec["exclude_driver"] in (p["arguments"].get("keep_driver_ids") or [])]
+        if optimized and not plans:
+            return kind, True, f"optimizer proposed, keeping driver {spec['exclude_driver']}'s route"
+        return kind, ok, f"{len(plans)} routes covering {len(set(stops))} of {len(want)} stops, drivers {[p['arguments']['driver_id'] for p in plans]}" + (
+            f"; optimizer proposals {[p['arguments'] for p in props if p['tool'] == 'propose_optimized_routes']}" if not plans else "")
     if kind == "no_proposals":
         return kind, not props, f"proposals {[p['tool'] for p in props]}"
     if kind == "no_proposals_except":

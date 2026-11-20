@@ -49,6 +49,10 @@ export interface Order {
   dropoff_location: LatLng | null;
   pickup_notes: string | null;
   dropoff_notes: string | null;
+  weight_kg: number;
+  /** Delivery window in Lagos time, "HH:MM", either end optional. */
+  dropoff_after: string | null;
+  dropoff_before: string | null;
   status: OrderStatus;
   route_id: number | null;
   pickup_stop_id: number;
@@ -190,6 +194,9 @@ export interface AgentAction {
     driver?: string;
     route_date?: string;
     stops?: { n: number; stop_id: number; type: StopType; address: string; order_id: number; customer: string }[];
+    /** propose_optimized_routes: the optimization run and its routes. */
+    run_id?: number;
+    routes?: { driver: string; vehicle: string; stops: number; km: number; orders: number[] }[];
     [k: string]: unknown;
   } | null;
   status: ActionStatus;
@@ -242,4 +249,47 @@ export interface KnowledgeHit {
   similarity: number;
   score: number;
   order_id: number | null;
+}
+
+// ---- Route optimization (Phase 3) ----
+
+export interface PlanStop {
+  stop_id: number;
+  order_id: number;
+  type: StopType;
+  address: string;
+  customer: string;
+  eta: string;
+}
+
+export interface OptimizationRun {
+  id: number;
+  route_date: string;
+  distance_provider: string;
+  status: 'proposed' | 'accepted' | 'discarded' | 'stale';
+  solve_ms: number;
+  manual_km: number;
+  proposed_km: number;
+  created_at: string;
+  created_by: string | null;
+  manual: {
+    routes: { route_id: number; driver_id: number; driver: string; stops: number; distance_km: number }[];
+    summary: {
+      manual: { routes: number; orders: number; km: number };
+      proposed: { routes: number; orders: number; km: number; km_for_manual_orders: number };
+      unplanned_orders_added: number;
+      locked_drivers: number[];
+    };
+  };
+  proposed: {
+    driver_id: number;
+    driver: string;
+    vehicle: string;
+    capacity_kg: number;
+    peak_load_kg: number;
+    distance_km: number;
+    stop_ids: number[];
+    stops: PlanStop[];
+  }[];
+  unassigned: { order_id: number; customer: string; reason: string }[];
 }

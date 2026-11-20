@@ -3,6 +3,8 @@
 //
 //   npm run seed            refuses if data already exists
 //   npm run seed -- --reset wipes all tables first
+//   add --manual-day        plan every order by hand the way a WhatsApp
+//                           dispatcher does, as a baseline for the optimizer
 //
 // Logins: admin@example.com and dispatcher@example.com, password from
 // SEED_PASSWORD (default password123). Drivers log in with PIN 1234.
@@ -58,8 +60,35 @@ const orders = [
   ['Amaka Obi', '08031110016', 'ikejaMall', 'maryland', null, null],
 ];
 
+// Parcel weights (kg) and delivery windows for some orders, by position in
+// the list above (1-based, which is also the order id after a reset).
+const WEIGHTS = { 3: 4, 7: 4, 9: 25, 12: 50, 14: 6 };
+const WINDOWS = { 6: ['16:00', null], 15: [null, '13:00'] };
+
+// How a dispatcher on WhatsApp typically splits a day: orders handed out in
+// the order they came in, one driver after another, each driver collecting
+// all their pickups first and then doing the dropoffs. Parcels too heavy
+// for a vehicle go to the next driver who can carry them.
+function manualPlan(orderList, drivers) {
+  const plans = drivers.map((d) => ({ ...d, orders: [], load: 0 }));
+  let next = 0;
+  for (const o of orderList) {
+    for (let tries = 0; tries < plans.length; tries += 1) {
+      const p = plans[(next + tries) % plans.length];
+      if (p.load + o.weight <= p.capacity) {
+        p.orders.push(o);
+        p.load += o.weight;
+        next = (next + tries + 1) % plans.length;
+        break;
+      }
+    }
+  }
+  return plans.filter((p) => p.orders.length);
+}
+
 async function main() {
   const reset = process.argv.includes('--reset');
+  const manualDay = process.argv.includes('--manual-day');
   await withTransaction(async (db) => {
     const { rows } = await db.query('SELECT count(*) AS n FROM users');
     if (rows[0].n > 0 && !reset) {
@@ -120,16 +149,17 @@ async function main() {
     }
 
     const stopPairs = [];
-    for (const [name, phone, from, to, pickupNotes, dropoffNotes] of orders) {
+    for (const [i, [name, phone, from, to, pickupNotes, dropoffNotes]] of orders.entries()) {
       const [pAddr, pLat, pLng] = places[from];
       const [dAddr, dLat, dLng] = places[to];
+      const [after, before] = WINDOWS[i + 1] ?? [null, null];
       const { rows: o } = await db.query(
         `INSERT INTO orders (customer_name, customer_phone, pickup_address, pickup_location,
-                             dropoff_address, dropoff_location)
+                             dropoff_address, dropoff_location, weight_kg, dropoff_after, dropoff_before)
          VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($5, $4), 4326)::geography,
-                 $6, ST_SetSRID(ST_MakePoint($8, $7), 4326)::geography)
+                 $6, ST_SetSRID(ST_MakePoint($8, $7), 4326)::geography, $9, $10, $11)
          RETURNING id, pickup_location, dropoff_location`,
-        [name, `+234${phone.slice(1)}`, pAddr, pLat, pLng, dAddr, dLat, dLng],
+        [name, `+234${phone.slice(1)}`, pAddr, pLat, pLng, dAddr, dLat, dLng, WEIGHTS[i + 1] ?? 1, after, before],
       );
       const { rows: s } = await db.query(
         `INSERT INTO stops (order_id, stop_type, address, location, notes) VALUES
@@ -140,11 +170,37 @@ async function main() {
         "INSERT INTO order_events (order_id, event_type, actor_type, actor_id) VALUES ($1, 'created', 'user', 2)",
         [o[0].id],
       );
-      stopPairs.push({ orderId: o[0].id, pickup: s[0].id, dropoff: s[1].id });
+      stopPairs.push({ orderId: o[0].id, pickup: s[0].id, dropoff: s[1].id, weight: WEIGHTS[i + 1] ?? 1 });
+    }
+
+    if (manualDay) {
+      // Every order on a route, planned the WhatsApp way (see manualPlan).
+      const fleet = [
+        { driverId: driverIds[0], vehicleId: vehicles[0].id, capacity: 20 },
+        { driverId: driverIds[1], vehicleId: vehicles[1].id, capacity: 20 },
+        { driverId: driverIds[2], vehicleId: vehicles[2].id, capacity: 150 },
+        { driverId: driverIds[3], vehicleId: vehicles[3].id, capacity: 800 },
+      ];
+      for (const plan of manualPlan(stopPairs, fleet)) {
+        const { rows: mr } = await db.query(
+          `INSERT INTO routes (driver_id, vehicle_id, route_date)
+           VALUES ($1, $2, (now() AT TIME ZONE 'Africa/Lagos')::date) RETURNING id`,
+          [plan.driverId, plan.vehicleId],
+        );
+        const seq = [...plan.orders.map((p) => p.pickup), ...plan.orders.map((p) => p.dropoff)];
+        for (const [n, stopId] of seq.entries()) {
+          await db.query('UPDATE stops SET route_id = $1, sequence_number = $2 WHERE id = $3', [mr[0].id, n + 1, stopId]);
+        }
+        for (const p of plan.orders) {
+          await db.query("UPDATE orders SET status = 'assigned' WHERE id = $1", [p.orderId]);
+          await db.query("INSERT INTO order_events (order_id, event_type, actor_type, actor_id) VALUES ($1, 'assigned', 'user', 2)", [p.orderId]);
+        }
+      }
     }
 
     // Plan today's route for the first driver with the first three orders,
     // all pickups first and then the dropoffs.
+    if (!manualDay) {
     const { rows: r } = await db.query(
       `INSERT INTO routes (driver_id, vehicle_id, route_date)
        VALUES ($1, $2, (now() AT TIME ZONE 'Africa/Lagos')::date) RETURNING id`,
@@ -162,6 +218,7 @@ async function main() {
         [p.orderId],
       );
     }
+    }
 
     // Company SOPs for knowledge search, from scripts/knowledge/*.md. The
     // first line is the title.
@@ -176,7 +233,8 @@ async function main() {
     }
   });
 
-  console.log('Seeded: 2 staff, 4 vehicles, 5 drivers, %d orders, 1 planned route, SOP documents.', orders.length);
+  console.log('Seeded: 2 staff, 4 vehicles, 5 drivers, %d orders, %s, SOP documents.', orders.length,
+    manualDay ? 'every order planned by hand' : '1 planned route');
   try {
     const r = await reindexAll();
     console.log('Knowledge indexed: %d chunks from %d documents and %d orders with notes.', r.chunks, r.documents, r.orders_with_notes);

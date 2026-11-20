@@ -30,6 +30,7 @@ const TITLES: [RegExp, string][] = [
   [/^\/$/, 'Dashboard'],
   [/^\/orders\/\d+/, 'Order'],
   [/^\/orders/, 'Orders'],
+  [/^\/routes\/optimize/, 'Optimize'],
   [/^\/routes\/\d+/, 'Route planner'],
   [/^\/routes/, 'Routes'],
   [/^\/drivers/, 'Drivers'],

@@ -50,7 +50,7 @@ router.post('/actions', asyncHandler(async (req, res) => {
     arguments: z.record(z.any()),
   }).strict(), req.body);
   await ownConversation(b.conversation_id, req.user);
-  const p = await proposeAction(b.tool, b.arguments);
+  const p = await proposeAction(b.tool, b.arguments, { userId: req.user.id });
   const { rows } = await pool.query(
     `INSERT INTO agent_actions (conversation_id, user_id, prompt, tool, arguments, summary, preview)
      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING ${ACTION_COLUMNS}`,

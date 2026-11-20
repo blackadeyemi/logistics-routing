@@ -128,6 +128,46 @@ const TOOLS = {
     },
   },
 
+  // Runs the optimizer now (it changes nothing) and proposes accepting that
+  // exact run. Confirming applies it; if the day changed meanwhile the run
+  // is stale and nothing is applied.
+  propose_optimized_routes: {
+    schema: z.object({ route_date: isoDate.optional(), keep_driver_ids: z.array(id).max(50).optional() }).strict(),
+    async preview(a, db, context) {
+      // eslint-disable-next-line global-require
+      const { optimizeDay } = require('./optimizer');
+      const run = await optimizeDay(a.route_date, context.userId, { keepDriverIds: a.keep_driver_ids ?? [] });
+      const s = run.manual.summary;
+      // Compare like with like: the orders both plans cover. Newly placed
+      // orders are reported separately, never folded into a "saving".
+      const parts = [`${s.proposed.routes} routes, ${s.proposed.orders} orders, ${s.proposed.km} km in total`];
+      if (s.manual.orders > 0) {
+        const pct = Math.round((1 - s.proposed.km_for_manual_orders / s.manual.km) * 100);
+        parts.push(`the ${s.manual.orders} orders already planned take ${s.proposed.km_for_manual_orders} km instead of ${s.manual.km} km (${pct >= 0 ? `${pct}% shorter` : `${-pct}% longer`})`);
+      }
+      if (s.unplanned_orders_added) parts.push(`${s.unplanned_orders_added} unassigned orders placed`);
+      if (run.unassigned.length) parts.push(`${run.unassigned.length} order(s) could not be placed`);
+      if (a.keep_driver_ids?.length) parts.push(`routes kept as they are for driver id(s) ${a.keep_driver_ids.join(', ')}`);
+      return {
+        args: { route_date: run.route_date, run_id: run.id, keep_driver_ids: a.keep_driver_ids ?? [] },
+        summary: `Apply the optimized plan for ${run.route_date}: ${parts.join('; ')}`,
+        details: {
+          route_date: run.route_date, run_id: run.id,
+          routes: run.proposed.map((r) => ({
+            driver: r.driver, vehicle: r.vehicle, stops: r.stops.length, km: r.distance_km, peak_load_kg: r.peak_load_kg, capacity_kg: r.capacity_kg,
+            orders: [...new Set(r.stops.map((st) => st.order_id))],
+          })),
+          manual: run.manual.routes.map((r) => ({ driver: r.driver, stops: r.stops, km: r.distance_km })),
+          unassigned: run.unassigned,
+        },
+      };
+    },
+    async apply(a, call) {
+      await call('POST', `/optimizations/${a.run_id}/accept`, {});
+      return { message: `Optimized plan applied for ${a.route_date}`, run_id: a.run_id };
+    },
+  },
+
   update_stop_status: {
     schema: z.object({ stop_id: id, action: z.enum(['arrive', 'start', 'complete', 'skip']) }).strict(),
     async preview(a, db) {
@@ -164,15 +204,17 @@ async function orderRow(db, orderId) {
 }
 
 /** Validates and previews a proposal. Throws HttpError the agent can read. */
-async function proposeAction(tool, args) {
+async function proposeAction(tool, args, context = {}) {
   const t = TOOLS[tool];
   if (!t) throw new HttpError(400, `Unknown write tool ${tool}`);
   const parsed = t.schema.safeParse(args);
   if (!parsed.success) {
     throw new HttpError(400, parsed.error.issues.map((i) => `${i.path.join('.') || 'input'}: ${i.message}`).join('; '));
   }
-  const p = await t.preview(parsed.data, pool);
-  return { arguments: parsed.data, summary: p.summary, preview: p.details };
+  const p = await t.preview(parsed.data, pool, context);
+  // A preview may pin extra arguments, such as the optimization run it
+  // computed, so confirming applies exactly what was shown.
+  return { arguments: p.args ?? parsed.data, summary: p.summary, preview: p.details };
 }
 
 // In-process HTTP to this same app, so a confirmed proposal goes through the

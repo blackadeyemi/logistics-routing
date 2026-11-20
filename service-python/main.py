@@ -97,6 +97,19 @@ async def extract_order_endpoint(body: ExtractRequest, x_anthropic_api_key: str 
     return result
 
 
+@app.post("/optimize/routes")
+def optimize_routes(body: dict):
+    """OR-Tools route optimization (Phase 3). Plain def: the solver is CPU
+    work, so FastAPI runs it in its thread pool. No API key involved."""
+    from optimize import OptimizeRequest, solve
+
+    try:
+        req = OptimizeRequest.model_validate(body)
+        return solve(req)
+    except ValueError as err:
+        raise HTTPException(400, {"code": "bad_input", "message": str(err)}) from err
+
+
 class EmbedRequest(BaseModel):
     texts: list[str] = Field(min_length=1, max_length=256)
     kind: str = Field(pattern="^(query|passage)$")

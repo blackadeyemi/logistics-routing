@@ -7,6 +7,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Drivers } from './pages/Drivers';
 import { Knowledge } from './pages/Knowledge';
 import { Login } from './pages/Login';
+import { Optimize } from './pages/Optimize';
 import { OrderDetail } from './pages/OrderDetail';
 import { Orders } from './pages/Orders';
 import { RoutePlanner } from './pages/RoutePlanner';
@@ -30,6 +31,7 @@ export function App() {
                 <Route path="orders" element={<Orders />} />
                 <Route path="orders/:id" element={<OrderDetail />} />
                 <Route path="routes" element={<RoutesPage />} />
+                <Route path="routes/optimize" element={<Optimize />} />
                 <Route path="routes/:id" element={<RoutePlanner />} />
                 <Route path="knowledge" element={<Knowledge />} />
                 <Route path="drivers" element={<Drivers />} />

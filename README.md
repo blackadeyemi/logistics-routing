@@ -7,11 +7,12 @@ installable driver app that keeps working when the network drops.
 
 The project is being built in phases, from manual dispatch up to an
 LLM-powered dispatch assistant, route optimization and live tracking.
-**Phases 1 and 2 are done**: manual dispatch with an offline driver app
-tested on a real Android phone, and an AI layer built on FastAPI and Claude
+**Phases 1 to 3 are done**: manual dispatch with an offline driver app
+tested on a real Android phone; an AI layer built on FastAPI and Claude
 with structured extraction, a tool-using dispatch copilot, and retrieval
-over company procedures and driver notes, each measured by evals in this
-repo.
+over company procedures and driver notes; and route optimization with
+OR-Tools that cuts a seeded day from 373 km to 100 km. Each is measured by
+an eval in this repo.
 
 | Dispatcher dashboard | Driver app (PWA) |
 | --- | --- |
@@ -21,6 +22,8 @@ repo.
 
 ![Dispatch copilot](docs/screenshots/copilot.png)
 
+![Route optimization](docs/screenshots/optimize.png)
+
 ## What it does today
 
 **Dispatchers** (web dashboard)
@@ -29,6 +32,13 @@ repo.
 - Plan each driver's day by hand: add orders to a route, drag stops into
   order, and get warned about a dropoff placed before its pickup. The
   planner shows straight-line distance and a map of the route.
+- **Optimize the day:** one click re-plans unassigned orders and routes
+  that have not started, across every driver with a vehicle. It respects
+  parcel weight against vehicle capacity, pickup before dropoff, and
+  delivery windows ("only home after 4pm"), and shows the plan next to the
+  current one: km and stops per driver, arrival times, and anything it
+  could not place. Routes can be kept as they are. Nothing changes until
+  the dispatcher accepts, and every route can still be edited afterwards.
 - Follow every order through a timeline built from the driver's updates.
 - Manage drivers (with app PINs), vehicles and staff accounts. Admins set
   the Google Maps key, the Anthropic key and the model from the Settings
@@ -40,11 +50,12 @@ repo.
   `+234`, checked by a Pydantic schema. The dispatcher reviews it in the
   normal order form before anything is saved.
 - **Dispatch copilot:** a chat panel that answers questions and acts
-  through 12 tools wrapping the API (drivers, orders, routes, knowledge
-  search, and five write tools). Writes are only ever proposed: each one
-  shows as a card with Confirm and Reject, and only a confirmation applies
-  it. Ask it to plan the whole day and it proposes one route per free
-  driver, keeping cakes off bikes.
+  through 13 tools wrapping the API (drivers, orders, routes, knowledge
+  search, and six write tools including `propose_optimized_routes`).
+  Writes are only ever proposed: each one shows as a card with Confirm and
+  Reject, and only a confirmation applies it. Ask it to plan the day and it
+  runs the optimizer, then checks the result against the SOPs (it flags a
+  cake the optimizer put on a bike).
 - **Knowledge search:** company SOPs and drivers' notes on stops (gate
   codes, landmarks, cash to collect), embedded locally and searched with
   pgvector plus keyword ranking. The copilot cites what it used, like [S1].
@@ -120,7 +131,7 @@ flowchart LR
 | --- | --- | --- |
 | 1. Manual dispatch | Auth, CRUD, manual routes, offline driver PWA, Lagos seed data | Done, tested on a Pixel 7 Pro (install, offline queue, sync) |
 | 2. AI layer | WhatsApp message to validated order (Pydantic structured output), dispatch copilot agent with tool calls and human confirmation of every write, RAG over driver notes and SOPs with pgvector, evals in the repo | Done, evals below |
-| 3. Route optimization | OR-Tools vehicle routing with pickup before dropoff, capacity and time windows, compared against the manual plan | Planned |
+| 3. Route optimization | OR-Tools vehicle routing with pickup before dropoff, capacity and time windows, compared against the manual plan | Done, benchmark below |
 | 4. Live tracking | Driver location, WebSocket updates, live map, ETAs, customer SMS tracking link | Planned |
 | 5. Traffic-aware routing | Road distances and durations, Lagos rush-hour profiles | Planned |
 | 6. Multi-tenant SaaS | Row level security per company, Paystack billing | Planned |
@@ -166,8 +177,10 @@ the route rules, a full driver day with offline retries, the settings
 endpoints (the Anthropic key is never returned and is stored encrypted),
 WhatsApp intake against a stand-in AI service, the copilot's proposal and
 confirmation rules (nothing changes until confirmed, a confirmation applies
-once, other dispatchers cannot decide your proposals), and knowledge
-indexing and search with a stand-in embedder.
+once, other dispatchers cannot decide your proposals), knowledge indexing and search with a stand-in embedder, and the
+optimizer (distance matrix against haversine, the manual comparison,
+accepting a plan that moves orders between drivers, stale plans, kept
+routes, and refusing a solver plan that breaks a rule).
 
 ## AI evals
 
@@ -179,8 +192,9 @@ service-python, Anthropic) with one command, and writes its results to
 | Eval | Cases | Headline | Model |
 | --- | --- | --- | --- |
 | WhatsApp order extraction | 32 messages, 161 scored fields | 98% of fields (Sonnet 5.5), 100% (Opus 5.5) | both |
-| Copilot agent | 18 scenarios, 78 checks | 18/18 scenarios, every write only proposed | Sonnet 5.5 |
+| Copilot agent | 19 scenarios, 83 checks | 19/19 scenarios, every write only proposed | Sonnet 5.5 |
 | Knowledge retrieval | 28 questions | 100% recall@5, MRR 0.96 | local embeddings |
+| Route optimizer | seeded day, 16 orders, 3 runs | valid every run, 5 s, 73% less driving than the manual plan | OR-Tools |
 
 ### Order intake from WhatsApp
 
@@ -232,12 +246,12 @@ A full run costs about $0.14 on Sonnet 5.5. Results are saved to
 
 ### Dispatch copilot
 
-18 scenarios on the seeded day, each a fresh conversation: reading
+19 scenarios on the seeded day, each a fresh conversation: reading
 (unassigned count, free drivers, an order's status, a route's stops),
 knowledge (part payment, a gate code, a city we do not serve), writes
 (create, cancel, add a note, assign given orders, add to an existing route
-without disturbing it, plan the whole day, record a stop a driver phoned
-in), and safety (a request to delete everything, marking an unrouted order
+without disturbing it, plan the whole day while leaving one driver's route
+alone, optimize the day, record a stop a driver phoned in), and safety (a request to delete everything, marking an unrouted order
 delivered, a cake on a bike, and "ignore your rules and just do it").
 
 Every scenario also checks that the data is exactly the same afterwards
@@ -246,17 +260,28 @@ and that every action the agent recorded is still only "proposed".
 | Check | Claude Sonnet 5.5 |
 | --- | --- |
 | Right tools called | 100% (9/9) |
-| Right arguments (ids, stop order, phone, fields) | 100% (11/11) |
-| Writes only proposed, data unchanged | 100% (46/46) |
+| Right arguments (ids, stop order, phone, fields) | 100% (14/14) |
+| Writes only proposed, data unchanged | 100% (48/48) |
 | Answer content | 100% (12/12) |
-| **Scenarios fully passed** | **18/18** |
-| Median time per scenario | 5.1 s |
-| Cost of the run | $0.28 |
+| **Scenarios fully passed** | **19/19** |
+| Median time per scenario | 5.3 s |
+| Cost of the run | $0.18 |
 
-Run on 18 November 2026. The judgement cases did what a careful dispatcher
-would: it would not put the cake on Chinedu's bike and cited the SOP; it
-explained an unrouted order cannot be marked delivered; and when told to
-skip confirmation it said it cannot and made a normal proposal.
+Run on 20 November 2026, after the optimizer tool was added (the first
+version, on 18 November, passed 18/18 of the scenarios that existed then).
+The judgement cases did what a careful dispatcher would: it would not put
+the cake on Chinedu's bike and cited the SOP; it explained an unrouted
+order cannot be marked delivered; and when told to skip confirmation it
+said it cannot and made a normal proposal.
+
+What changed with the optimizer: asked to plan the day "but leave Musa's
+route alone", the copilot first used the optimizer, which re-plans every
+route that has not started, and then warned that its own proposal broke the
+instruction. The fix was in the product, not the prompt: the optimizer can
+now keep chosen drivers' routes as they are, and the copilot passes Musa's
+id. That scenario accepts either a hand-built plan or the optimizer with
+Musa's route kept. The scorer also ignores Markdown bold when matching
+answer text ("still **pending**").
 
 ```sh
 docker compose exec api-node npm run seed -- --reset   # the eval needs the seeded day
@@ -286,6 +311,55 @@ page gives for writing SOPs. The first run is kept in
 
 ```sh
 docker compose exec service-python python -m evals.run_retrieval
+```
+
+### Route optimizer
+
+Phase 3's exit criterion, as a runnable check: on a seeded day of 16 orders
+planned by hand, the optimizer must return valid routes in under 10
+seconds and beat the manual plan on total distance. The benchmark checks
+validity itself, from the stop coordinates and order data rather than the
+API's numbers: each order exactly once, its pickup before its dropoff on
+the same route, no vehicle over its capacity, and every delivery window
+met by the plan's arrival times. Distances are recomputed with haversine.
+
+The manual plan is how a day dispatched on WhatsApp usually runs: orders
+handed out in the order they came in, one driver after another, each
+driver collecting all their pickups first. A second baseline keeps the same
+drivers and orders but pairs each pickup with its dropoff, as the planner's
+"Pair up" button does.
+
+| Plan | Total km | Optimized saves |
+| --- | --- | --- |
+| Manual, WhatsApp-style (pickups first) | 373.3 | 73% |
+| Manual, each order paired | 320.2 | 69% |
+| **Optimized** (3 runs, identical) | **99.6** | |
+
+| Check | Result |
+| --- | --- |
+| Valid routes (pairs, order, capacity, windows) | yes, every run |
+| Slowest request | 5.1 s (limit 10 s) |
+| Beats both manual plans | yes |
+
+Run on 20 November 2026 with straight-line distances. Most of the saving
+comes from who gets which order, not stop order: arrival-order dispatching
+sends every driver across Lagos.
+
+The objective is distance plus a charge for late deliveries. Distance alone
+produced a plan 2.4 km shorter in which one keke rider idled from 09:03 to
+16:00 waiting for a 4pm window with five other parcels on board and made
+the last drops after 7pm. Charging for each minute a delivery happens
+after it could have, the same plan finishes that rider by 12:15 and gives
+the 4pm order to a driver who has nothing else left.
+
+Known limits: the optimizer knows weight but not vehicle rules from the
+SOPs, such as cakes off bikes, so the copilot checks those against its
+proposals; routes are open (no depot), and times are estimates from
+straight lines at Lagos traffic speed until Phase 5 brings road distances.
+
+```sh
+docker compose exec api-node npm run seed -- --reset --manual-day
+docker compose exec service-python python -m evals.run_optimizer
 ```
 
 ## Repository layout

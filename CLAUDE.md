@@ -50,16 +50,17 @@ visual language or a CSS framework.
   `docker compose exec service-python python -m evals.run_extraction`,
   `... evals.run_agent` (needs a freshly seeded day) and
   `... evals.run_retrieval` (free, local embeddings).
+- Optimizer benchmark (free): `npm run seed -- --reset --manual-day`, then
+  `docker compose exec service-python python -m evals.run_optimizer`.
 - `cd web && npm run dev` serves the app on http://logistics-routing.test
   (Laragon Apache proxies it to Vite on 5173, see web/README.md) or
   http://localhost:5173.
   `npm run build && npm run preview` tests the real service worker, which
   is off in dev.
 
-## Current phase: Phase 2 (exit criteria met)
-Phase 2 is complete: WhatsApp intake and the copilot work end to end and
-all three evals are green in the README. Phase 3 starts only when the
-user says so.
+## Current phase: Phase 3 (exit criteria met)
+Phases 1 to 3 are complete (exit criteria met, evals and the optimizer
+benchmark in the README). Phase 4 starts only when the user says so.
 Build only what the current phase lists. Do not start work from a later
 phase until told to move to it. Each phase is done when its exit criteria
 are met.

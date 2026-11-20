@@ -44,6 +44,9 @@ export function OrderForm({ order, draft, onClose, onSaved, onBack }: {
     dropoff_address: order?.dropoff_address ?? d?.dropoff_address ?? '',
     dropoff_location: showLatLng(order?.dropoff_location ?? null),
     dropoff_notes: order?.dropoff_notes ?? d?.dropoff_notes ?? '',
+    weight_kg: String(order?.weight_kg ?? 1),
+    dropoff_after: order?.dropoff_after ?? '',
+    dropoff_before: order?.dropoff_before ?? '',
   });
   const missing = new Set(draft?.missing ?? []);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -80,6 +83,9 @@ export function OrderForm({ order, draft, onClose, onSaved, onBack }: {
       customer_phone: f.customer_phone,
       pickup_notes: f.pickup_notes,
       dropoff_notes: f.dropoff_notes,
+      weight_kg: Number(f.weight_kg),
+      dropoff_after: f.dropoff_after,
+      dropoff_before: f.dropoff_before,
     };
     if (!pickupLocked) {
       Object.assign(body, {
@@ -167,6 +173,19 @@ export function OrderForm({ order, draft, onClose, onSaved, onBack }: {
         <Field label="Notes for the driver (optional)" error={errors.dropoff_notes} hint="Landmarks, gate, money to collect, call on arrival. The driver sees this at the dropoff.">
           <textarea className="form-control" rows={2} maxLength={1000} value={f.dropoff_notes} onChange={set('dropoff_notes')} placeholder="White gate after GTB. Call on arrival. Collect ₦15,000." />
         </Field>
+
+        <div className="form-section">For route planning</div>
+        <div className="form-row form-row-3">
+          <Field label="Parcel weight (kg)" error={errors.weight_kg} hint="Checked against vehicle capacity.">
+            <input className="form-control" type="number" min="0.1" step="0.1" max="5000" required value={f.weight_kg} onChange={set('weight_kg')} />
+          </Field>
+          <Field label="Deliver after (optional)" error={errors.dropoff_after} hint="Lagos time">
+            <input className="form-control" type="time" value={f.dropoff_after} onChange={set('dropoff_after')} />
+          </Field>
+          <Field label="Deliver before (optional)" error={errors.dropoff_before}>
+            <input className="form-control" type="time" value={f.dropoff_before} onChange={set('dropoff_before')} />
+          </Field>
+        </div>
 
         {maps && preview.length > 0 && <StopsMap points={preview} height={220} className="form-map" />}
       </form>

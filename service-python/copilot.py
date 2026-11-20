@@ -61,6 +61,11 @@ class ListRoutes(BaseModel):
     date: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
 
 
+class OptimizeDay(BaseModel):
+    route_date: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    keep_driver_ids: list[int] | None = None
+
+
 class RouteId(BaseModel):
     route_id: int
 
@@ -126,6 +131,8 @@ TOOLS: list[dict] = [
     {"name": "cancel_order", "description": "PROPOSE cancelling an order that is pending or assigned. The dispatcher confirms first.", "input_schema": schema({"order_id": {"type": "integer"}}, ["order_id"])},
     {"name": "assign_stops", "description": "PROPOSE a driver's complete stop list for a day, in visiting order. Creates the route if the driver has none that day. The list REPLACES the route's stops, so include stops already on it that should stay. Rules: both stops of an order go on the same route, each pickup before its dropoff, no cancelled orders. The dispatcher confirms first.",
      "input_schema": schema({"driver_id": {"type": "integer"}, "route_date": DATE, "stop_ids": {"type": "array", "items": {"type": "integer"}}}, ["driver_id", "stop_ids"])},
+    {"name": "propose_optimized_routes", "description": "PROPOSE an optimized plan for a day, computed by the route optimizer (OR-Tools): it re-plans every unassigned order and every route not yet started across the free drivers, respecting vehicle capacity in kg, pickup before dropoff and delivery time windows, and minimising total distance. The proposal shows total km against the current plan. Prefer this over building routes by hand when asked to plan or optimize a whole day. If the dispatcher wants some drivers' routes left as they are, pass those driver ids in keep_driver_ids: their routes and orders are not touched. The dispatcher confirms first.",
+     "input_schema": schema({"route_date": DATE, "keep_driver_ids": {"type": "array", "items": {"type": "integer"}, "description": "Drivers whose current route must stay exactly as it is"}})},
     {"name": "update_stop_status", "description": "PROPOSE recording a stop update for a driver who phoned it in: arrive, start (dropoff only, trip begun), complete (picked up or delivered), skip (could not pick up or deliver). The dispatcher confirms first.",
      "input_schema": schema({"stop_id": {"type": "integer"}, "action": {"type": "string", "enum": ["arrive", "start", "complete", "skip"]}}, ["stop_id", "action"])},
 ]
@@ -136,14 +143,15 @@ INPUTS = {
     "get_today_overview": NoArgs, "list_drivers": ListDrivers, "list_orders": ListOrders, "get_order": OrderId,
     "list_routes": ListRoutes, "get_route": RouteId, "search_knowledge": SearchKnowledge,
     "create_order": CreateOrder, "update_order": UpdateOrder, "cancel_order": OrderId,
-    "assign_stops": AssignStops, "update_stop_status": StopStatus,
+    "assign_stops": AssignStops, "update_stop_status": StopStatus, "propose_optimized_routes": OptimizeDay,
 }
-WRITE_TOOLS = {"create_order", "update_order", "cancel_order", "assign_stops", "update_stop_status"}
+WRITE_TOOLS = {"create_order", "update_order", "cancel_order", "assign_stops", "update_stop_status", "propose_optimized_routes"}
 LABELS = {
     "get_today_overview": "Checking today's numbers", "list_drivers": "Looking up drivers", "list_orders": "Looking up orders",
     "get_order": "Opening order", "list_routes": "Looking up routes", "get_route": "Opening route",
     "search_knowledge": "Searching SOPs and driver notes", "create_order": "Proposing a new order", "update_order": "Proposing an order change",
     "cancel_order": "Proposing a cancellation", "assign_stops": "Proposing a route", "update_stop_status": "Proposing a stop update",
+    "propose_optimized_routes": "Running the route optimizer",
 }
 
 SYSTEM = """You are the dispatch copilot for a courier company in Lagos, Nigeria. You help dispatchers plan the day, find information and keep orders moving.
@@ -158,7 +166,8 @@ Planning routes:
 - An order has a pickup stop and a dropoff stop. Both go on the same driver's route, the pickup before the dropoff.
 - Only pending orders (not on a route) can be added. Check list_routes first: a driver has at most one route per day, and assign_stops replaces that route's whole stop list.
 - Keep each driver's stops geographically sensible: group Mainland (Ikeja, Yaba, Surulere, Maryland, Ogba, Gbagada, Oshodi, Festac, Apapa) and Island (Victoria Island, Ikoyi, Lekki, Ajah) work where you can, and respect vehicle type (cakes and large items not on bikes, per the SOPs).
-- When asked to plan the whole day, propose one assign_stops per driver, and list what you proposed.
+- When asked to plan or optimize the whole day, use propose_optimized_routes: the optimizer handles capacity, pickup order and time windows and minimises distance. Summarise its routes and the km saved. Use assign_stops for specific requests ("give these orders to Peter") or if the dispatcher asks you to plan by hand.
+- The optimizer does not know about vehicle rules in the SOPs (for example cakes not on bikes). After proposing its plan, check the routes it shows against those rules and point out anything the dispatcher should change.
 
 Answers:
 - For policy, prices, procedures or how to handle a situation, use search_knowledge and cite the refs you used, like [S1]. If the SOPs do not cover it, say so.
@@ -324,7 +333,9 @@ async def run_turn(*, api_key: str, model: str, messages: list[dict], user_token
                         yield sse({"type": "proposal", "action": action})
                         display.append({"type": "proposal", "action_id": action["id"]})
                         content = json.dumps({"proposed": True, "action_id": action["id"], "summary": action["summary"],
-                                              "status": "Waiting for the dispatcher to confirm or reject in the chat panel. NOT applied yet."})
+                                              "preview": action.get("preview"),
+                                              "status": "Waiting for the dispatcher to confirm or reject in the chat panel. NOT applied yet."},
+                                             ensure_ascii=False, default=str)
                     else:
                         before = len(state["sources"])
                         data = await run_read(api, name, args, state)

@@ -255,6 +255,7 @@ const STATUS: Record<AgentAction['status'], { tone: string; label: string }> = {
 function ProposalCard({ action: a, onDecide }: { action: AgentAction; onDecide: (a: AgentAction, d: 'confirm' | 'reject') => void }) {
   const s = STATUS[a.status];
   const stops = a.preview?.stops;
+  const routes = a.preview?.routes;
   return (
     <div className={`proposal ${a.status}`}>
       <div className="proposal-head">
@@ -273,6 +274,17 @@ function ProposalCard({ action: a, onDecide }: { action: AgentAction; onDecide: 
           ))}
         </ol>
       )}
+      {routes && (
+        <ul className="proposal-routes">
+          {routes.map((r) => (
+            <li key={r.driver}>
+              <strong>{r.driver}</strong> <span className="text-xs text-muted">{r.vehicle}</span>
+              <span className="text-xs"> · {r.stops} stops · {r.km} km · orders {r.orders.map((o) => `#${o}`).join(', ')}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {a.preview?.run_id && <p className="text-xs mb-0"><Link to={`/routes/optimize?date=${a.preview.route_date}`}>Compare in detail on the Optimize page</Link></p>}
       {a.preview?.route_date && <p className="text-xs text-muted mb-0">For {fmtDay(a.preview.route_date)}</p>}
       {a.result?.message && a.status !== 'proposed' && <p className="text-sm mb-0">{a.result.message}{a.result.route_id ? <> · <Link to={`/routes/${a.result.route_id}`}>open route</Link></> : a.result.order_id ? <> · <Link to={`/orders/${a.result.order_id}`}>open order</Link></> : null}</p>}
       {a.result?.error && <p className="text-sm text-danger mb-0">{a.result.error}</p>}

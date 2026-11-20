@@ -1,0 +1,66 @@
+{
+  "summary": {
+    "orders": 16,
+    "manual_routes": 4,
+    "runs": 3,
+    "whatsapp_km": 373.3,
+    "paired_km": 320.2,
+    "optimized_km_best": 99.6,
+    "optimized_km_worst": 99.6,
+    "saving_vs_whatsapp": 0.733,
+    "saving_vs_paired": 0.689,
+    "slowest_secs": 5.07,
+    "all_valid": true,
+    "exit_criteria_met": true
+  },
+  "runs": [
+    {
+      "run_id": 1,
+      "secs": 5.07,
+      "solve_ms": 5006,
+      "km": 99.6,
+      "api_km": 99.36,
+      "routes": 4,
+      "unassigned": 0,
+      "problems": [],
+      "stops_per_route": [
+        6,
+        8,
+        14,
+        4
+      ]
+    },
+    {
+      "run_id": 2,
+      "secs": 5.03,
+      "solve_ms": 5002,
+      "km": 99.6,
+      "api_km": 99.36,
+      "routes": 4,
+      "unassigned": 0,
+      "problems": [],
+      "stops_per_route": [
+        6,
+        8,
+        14,
+        4
+      ]
+    },
+    {
+      "run_id": 3,
+      "secs": 5.03,
+      "solve_ms": 5002,
+      "km": 99.6,
+      "api_km": 99.36,
+      "routes": 4,
+      "unassigned": 0,
+      "problems": [],
+      "stops_per_route": [
+        6,
+        8,
+        14,
+        4
+      ]
+    }
+  ]
+}

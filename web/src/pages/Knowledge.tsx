@@ -52,7 +52,7 @@ export function Knowledge() {
       {notice && <div className="alert alert-info">{notice}</div>}
 
       <div className="stat-flex">
-        <div className="stat-card"><div className="stat-val info">{stats?.documents ?? '–'}</div><div className="stat-lbl">SOP documents</div></div>
+        <div className="stat-card"><div className="stat-val tone-brand">{stats?.documents ?? '–'}</div><div className="stat-lbl">SOP documents</div></div>
         <div className="stat-card"><div className="stat-val">{stats?.sop_chunks ?? '–'}</div><div className="stat-lbl">SOP sections indexed</div></div>
         <div className="stat-card"><div className="stat-val">{stats?.note_chunks ?? '–'}</div><div className="stat-lbl">Driver notes indexed</div></div>
       </div>

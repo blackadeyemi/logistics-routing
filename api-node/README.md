@@ -96,7 +96,7 @@ Driver responses include `has_pin` and the assigned `vehicle`.
 |---|---|---|
 | GET | /orders | `?status=pending,assigned&q=lekki&date=YYYY-MM-DD&limit=50&offset=0` |
 | GET | /orders/:id | Includes `events`, the order timeline |
-| POST | /orders | `customer_name, customer_phone, pickup_address, pickup_location?, pickup_notes?, dropoff_address, dropoff_location?, dropoff_notes?` |
+| POST | /orders | `customer_name, customer_phone, pickup_address, pickup_location?, pickup_notes?, dropoff_address, dropoff_location?, dropoff_notes?, weight_kg? (default 1), dropoff_after?, dropoff_before?` (delivery window, Lagos time `HH:MM`, either end optional, `""` for none) |
 | PATCH | /orders/:id | Any create field. Addresses lock once the driver starts that stop; notes can change any time and show on the stops (`notes`) in routes and the driver app |
 | POST | /orders/:id/cancel | Only pending or assigned orders |
 
@@ -245,10 +245,36 @@ model, so search needs service-python running but no API key.
 
 Write tools the copilot can propose: `create_order`, `update_order`,
 `cancel_order`, `assign_stops` (`driver_id, route_date?, stop_ids`: the
-driver's whole stop list for the day, creating the route if needed) and
-`update_stop_status` (`stop_id, action`). Only the user who owns the
+driver's whole stop list for the day, creating the route if needed),
+`update_stop_status` (`stop_id, action`) and `propose_optimized_routes`
+(`route_date?, keep_driver_ids?`: runs the optimizer when proposing, so
+confirming applies exactly the plan that was shown). Only the user who owns the
 conversation, or an admin, can see or decide its proposals. Each copilot
 turn is logged in `ai_usage` with feature `copilot`.
+
+### Optimizations (staff)
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| POST | `/optimizations` | `route_date?, keep_driver_ids?`. Runs the optimizer (about 5 s) and stores a proposal; changes no routes. 409 when there is nothing to plan or no free driver with a vehicle |
+| GET | `/optimizations` | `?date=`. Recent runs |
+| GET | `/optimizations/:id` | The run: `manual` (current routes and `summary`), `proposed` (routes with `stop_ids`, `stops` with `eta`, `distance_km`, `peak_load_kg`), `unassigned` (with a reason), `solve_ms`, `status` |
+| POST | `/optimizations/:id/accept` | Applies the plan in one transaction. 409 `details.code: stale` when routes or orders changed since the run (it is then marked `stale`) |
+| POST | `/optimizations/:id/discard` | |
+
+What is planned: every unassigned order and every route of that day that
+has not started, across active drivers with an active vehicle. Started or
+finished routes, and routes of drivers in `keep_driver_ids`, are left as
+they are along with their orders. Constraints: pickup before dropoff on
+the same vehicle, `weight_kg` against `vehicles.capacity_kg`, and delivery
+windows. The objective is straight-line distance plus a charge per minute
+a delivery is later than it could be. `summary.proposed.km_for_manual_orders`
+compares like with like when the run also places unassigned orders.
+
+The distance matrix comes from `src/distance.js` (`DISTANCE_PROVIDER`,
+only `straight_line` today: PostGIS geodesic distance, with times from a
+1.35 detour factor at 18 km/h). Phase 5 adds road distances behind the
+same interface.
 
 ### Settings
 

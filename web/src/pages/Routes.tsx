@@ -41,6 +41,7 @@ export function RoutesPage() {
             <button className="btn btn-ghost btn-icon" onClick={() => setDate(shiftDate(date, 1))} aria-label="Next day"><Icon name="right" /></button>
             {date !== today && <button className="btn btn-ghost btn-sm" onClick={() => setDate(today)}>Today</button>}
           </div>
+          <Link className="btn btn-ghost" to={`/routes/optimize?date=${date}`}><Icon name="sparkle" /> Optimize day</Link>
           <button className="btn btn-primary" onClick={() => setCreating(true)} disabled={!free.length}><Icon name="plus" /> New route</button>
         </div>
       </div>

@@ -12,3 +12,4 @@ dev-dist/
 *.log
 coverage/
 service-python/evals/results/*-partial.json
+docker-compose.override.yml
