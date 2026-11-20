@@ -7,14 +7,17 @@
 //           what the customer would receive (the default)
 //   termii  Termii's SMS API (POST {base_url}/api/sms/send), the base URL
 //           and sender ID from the Termii dashboard
-// An admin sets the provider on the Settings page; the Termii key is
-// stored encrypted like the Anthropic key. .env values are the fallback.
+//   brevo   Brevo's transactional SMS API (POST /v3/transactionalSMS/send),
+//           with a sender ID registered with Brevo for Nigeria
+// An admin sets the provider on the Settings page; API keys are stored
+// encrypted like the Anthropic key. .env values are the fallback.
 const { pool } = require('./db');
 const { decrypt } = require('./secrets');
 
 const KEYS = {
   provider: 'sms_provider', baseUrl: 'termii_base_url', apiKey: 'termii_api_key',
   senderId: 'termii_sender_id', channel: 'termii_channel', publicUrl: 'public_app_url', company: 'company_name',
+  brevoKey: 'brevo_api_key', brevoSender: 'brevo_sender',
 };
 
 async function smsConfig(db = pool) {
@@ -22,6 +25,7 @@ async function smsConfig(db = pool) {
   const by = Object.fromEntries(rows.map((r) => [r.key, r.value]));
   const env = process.env;
   const savedKey = decrypt(by[KEYS.apiKey]);
+  const savedBrevo = decrypt(by[KEYS.brevoKey]);
   return {
     provider: by[KEYS.provider] || env.SMS_PROVIDER || 'log',
     baseUrl: (by[KEYS.baseUrl] || env.TERMII_BASE_URL || '').replace(/\/$/, ''),
@@ -32,6 +36,11 @@ async function smsConfig(db = pool) {
     channel: by[KEYS.channel] || env.TERMII_CHANNEL || 'dnd',
     publicUrl: (by[KEYS.publicUrl] || env.PUBLIC_APP_URL || 'http://logistics-routing.test').replace(/\/$/, ''),
     company: by[KEYS.company] || env.COMPANY_NAME || '',
+    brevoApiKey: savedBrevo || env.BREVO_API_KEY || null,
+    brevoKeySource: savedBrevo ? 'settings' : env.BREVO_API_KEY ? 'env' : 'none',
+    brevoKeyUnreadable: !!by[KEYS.brevoKey] && !savedBrevo,
+    brevoSender: by[KEYS.brevoSender] || env.BREVO_SENDER || '',
+    brevoUrl: (env.BREVO_API_URL || 'https://api.brevo.com').replace(/\/$/, ''),
   };
 }
 
@@ -70,6 +79,35 @@ async function sendTermii(cfg, to, body) {
   return { status: 'failed', error: `Termii ${res.status}: ${data.message ?? JSON.stringify(data).slice(0, 200)}` };
 }
 
+async function sendBrevo(cfg, to, body, reason) {
+  if (!cfg.brevoApiKey || !cfg.brevoSender) {
+    return { status: 'failed', error: 'Brevo is not fully set up: an API key and a sender are both needed' };
+  }
+  let res;
+  try {
+    res = await fetch(`${cfg.brevoUrl}/v3/transactionalSMS/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'api-key': cfg.brevoApiKey },
+      // Country code and number, no plus: 2348031234567. Transactional
+      // messages have no sending-hours limit at Brevo.
+      body: JSON.stringify({ sender: cfg.brevoSender, recipient: to.replace(/^\+/, ''), content: body, type: 'transactional', tag: `tracking-${reason}` }),
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch (err) {
+    return { status: 'failed', error: `Could not reach Brevo: ${err.message}` };
+  }
+  const data = await res.json().catch(() => ({}));
+  if (res.ok && data.messageId != null) return { status: 'sent', providerMessageId: String(data.messageId) };
+  return { status: 'failed', error: `Brevo ${res.status}: ${data.code ? `${data.code}, ` : ''}${data.message ?? JSON.stringify(data).slice(0, 200)}` };
+}
+
+/** Sends through the configured provider. */
+function deliver(cfg, to, body, reason) {
+  if (cfg.provider === 'termii') return sendTermii(cfg, to, body);
+  if (cfg.provider === 'brevo') return sendBrevo(cfg, to, body, reason);
+  return Promise.resolve({ status: 'logged' });
+}
+
 /**
  * Sends (or logs) one SMS about an order. Automatic reasons go out at most
  * once per order: the unique index on (order_id, reason) is the guard.
@@ -87,8 +125,7 @@ async function sendOrderSms(orderId, reason, userId = null) {
     [orderId, o[0].customer_phone, body, reason, cfg.provider, userId],
   );
   if (!claimed[0]) return null;
-  let result = { status: 'logged' };
-  if (cfg.provider === 'termii') result = await sendTermii(cfg, o[0].customer_phone, body);
+  const result = await deliver(cfg, o[0].customer_phone, body, reason);
   const { rows } = await pool.query(
     'UPDATE sms_messages SET status = $2, provider_message_id = $3, error = $4 WHERE id = $1 RETURNING *',
     [claimed[0].id, result.status, result.providerMessageId ?? null, result.error ?? null],
@@ -103,4 +140,4 @@ function notifyLater(orderId, reason) {
   });
 }
 
-module.exports = { smsConfig, sendOrderSms, notifyLater, trackingUrl, SMS_KEYS: KEYS, sendTermii };
+module.exports = { smsConfig, sendOrderSms, notifyLater, trackingUrl, deliver, SMS_KEYS: KEYS, sendTermii, sendBrevo };

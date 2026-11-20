@@ -29,7 +29,7 @@ export function Messages() {
       {data?.provider === 'log' && (
         <div className="alert alert-info">
           SMS sending is not set up, so messages stay in this outbox and no customer receives them.
-          {user?.role === 'admin' ? <> Add a Termii account on <Link to="/settings">Settings</Link>.</> : ' An admin can set it up on the Settings page.'}
+          {user?.role === 'admin' ? <> Add a Termii or Brevo account on <Link to="/settings">Settings</Link>.</> : ' An admin can set it up on the Settings page.'}
         </div>
       )}
       <div className="card">

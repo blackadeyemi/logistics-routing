@@ -145,7 +145,8 @@ export interface AppSettings {
     updated_by: string | null;
   };
   sms: {
-    provider: 'log' | 'termii';
+    provider: 'log' | 'termii' | 'brevo';
+    brevo: { sender: string; api_key_set: boolean; api_key_hint: string | null; key_source: 'settings' | 'env' | 'none'; key_unreadable: boolean };
     base_url: string;
     sender_id: string;
     channel: 'dnd' | 'generic';
@@ -372,7 +373,7 @@ export interface SmsMessage {
   to_phone: string;
   body: string;
   reason: 'en_route' | 'delivered' | 'manual';
-  provider: 'log' | 'termii';
+  provider: 'log' | 'termii' | 'brevo';
   status: 'logged' | 'sent' | 'failed';
   error: string | null;
   created_at: string;

@@ -5,14 +5,15 @@ import { fmtDateTime } from '../lib/format';
 import type { AppSettings } from '../lib/types';
 
 /**
- * Customer SMS: the public address used in tracking links, and Termii for
- * sending. Without Termii, texts stay in the dashboard's outbox.
+ * Customer SMS: the public address used in tracking links, and Termii or
+ * Brevo for sending. Without a provider, texts stay in the outbox.
  */
 export function SmsSettings({ settings, onSaved }: { settings: AppSettings; onSaved: () => unknown }) {
   const s = settings.sms;
   const [f, setF] = useState({
     provider: s.provider, base_url: s.base_url, sender_id: s.sender_id, channel: s.channel,
     public_app_url: s.public_app_url, company_name: s.company_name, api_key: '',
+    brevo_api_key: '', brevo_sender: s.brevo.sender,
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,10 +30,11 @@ export function SmsSettings({ settings, onSaved }: { settings: AppSettings; onSa
     setErrors({});
     setSaved(false);
     try {
-      const body: Record<string, string> = { provider: f.provider, base_url: f.base_url, sender_id: f.sender_id, channel: f.channel, public_app_url: f.public_app_url, company_name: f.company_name };
+      const body: Record<string, string> = { provider: f.provider, base_url: f.base_url, sender_id: f.sender_id, channel: f.channel, public_app_url: f.public_app_url, company_name: f.company_name, brevo_sender: f.brevo_sender };
       if (f.api_key.trim()) body.api_key = f.api_key.trim();
+      if (f.brevo_api_key.trim()) body.brevo_api_key = f.brevo_api_key.trim();
       await staffApi('/settings', { method: 'PUT', body: { sms: body } });
-      setF((x) => ({ ...x, api_key: '' }));
+      setF((x) => ({ ...x, api_key: '', brevo_api_key: '' }));
       setSaved(true);
       await onSaved();
     } catch (err) {
@@ -55,12 +57,14 @@ export function SmsSettings({ settings, onSaved }: { settings: AppSettings; onSa
   };
 
   const termii = f.provider === 'termii';
+  const brevo = f.provider === 'brevo';
+  const PROVIDER_LABEL = { log: 'Outbox only', termii: 'Termii', brevo: 'Brevo' } as const;
   return (
     <div className="settings-grid">
       <section className="card card-pad">
         <div className="flex items-center gap-2 settings-head">
           <h2 className="card-title grow">Customer SMS</h2>
-          <Badge tone={s.provider === 'termii' ? 'success' : 'muted'}>{s.provider === 'termii' ? 'Termii' : 'Outbox only'}</Badge>
+          <Badge tone={s.provider === 'log' ? 'muted' : 'success'}>{PROVIDER_LABEL[s.provider]}</Badge>
         </div>
         <p className="text-sm text-muted">Customers get a text with a tracking link when the driver sets off to them, and when the parcel is delivered.</p>
         <form onSubmit={save}>
@@ -78,6 +82,7 @@ export function SmsSettings({ settings, onSaved }: { settings: AppSettings; onSa
             <select className="form-control" value={f.provider} onChange={set('provider')}>
               <option value="log">Do not send: keep texts in the dashboard outbox</option>
               <option value="termii">Send with Termii</option>
+              <option value="brevo">Send with Brevo</option>
             </select>
           </Field>
           {termii && (
@@ -103,6 +108,19 @@ export function SmsSettings({ settings, onSaved }: { settings: AppSettings; onSa
               </div>
             </>
           )}
+          {brevo && (
+            <>
+              <div className="form-row">
+                <Field label="Brevo API key" error={errors.brevo_api_key} hint={s.brevo.api_key_set ? `Saved: ${s.brevo.api_key_hint}. Leave empty to keep it.` : 'From Brevo, SMTP & API, API keys. Starts with xkeysib-. Stored encrypted.'}>
+                  <input className="form-control mono" type="password" autoComplete="off" value={f.brevo_api_key} onChange={set('brevo_api_key')} disabled={!s.can_save_secrets} />
+                </Field>
+                <Field label="Sender" error={errors.brevo_sender} hint="3 to 11 letters or digits, registered with Brevo for Nigeria">
+                  <input className="form-control" maxLength={11} value={f.brevo_sender} onChange={set('brevo_sender')} placeholder="SwiftCour" />
+                </Field>
+              </div>
+              <div className="alert alert-info">Brevo needs a Sender ID registered for each country. Nigerian networks block unregistered and numeric senders (MTN requires registration), so register yours for Nigeria in Brevo before relying on it. Texts are sent as transactional, with no sending-hours limit, and use your Brevo SMS credits.</div>
+            </>
+          )}
           <div className="flex gap-2 settings-actions">
             <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
           </div>
@@ -112,13 +130,13 @@ export function SmsSettings({ settings, onSaved }: { settings: AppSettings; onSa
 
       <section className="card card-pad settings-help">
         <h2 className="card-title">Test a text</h2>
-        <p className="text-sm text-muted">After saving Termii settings, send one message to your own phone.</p>
+        <p className="text-sm text-muted">After saving Termii or Brevo settings, send one message to your own phone.</p>
         <div className="flex gap-2">
           <input className="form-control mono grow" inputMode="tel" placeholder="0803 123 4567" value={testTo} onChange={(e) => setTestTo(e.target.value)} />
-          <button type="button" className="btn btn-ghost" onClick={sendTest} disabled={s.provider !== 'termii' || !testTo.trim()}>Send test</button>
+          <button type="button" className="btn btn-ghost" onClick={sendTest} disabled={s.provider === 'log' || !testTo.trim()}>Send test</button>
         </div>
         {test && <div className={`alert ${test.ok ? 'alert-success' : 'alert-error'} mt-2`}>{test.text}</div>}
-        <p className="text-xs text-muted mb-0 mt-2">Each text is a few naira on Termii, billed to your Termii balance.</p>
+        <p className="text-xs text-muted mb-0 mt-2">Each text is billed by your SMS provider: Termii balance or Brevo SMS credits.</p>
       </section>
     </div>
   );

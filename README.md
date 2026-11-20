@@ -51,8 +51,8 @@ measured by an eval or benchmark in this repo.
   per driver, and how much was lost while the app was in the background.
 - **Customer SMS:** a text with a tracking link when the driver sets off
   to the customer and when the parcel is delivered, or sent by hand from
-  the order page. Through Termii once an admin adds an account; until
-  then texts wait in an outbox in the dashboard.
+  the order page. Through Termii or Brevo once an admin adds an account;
+  until then texts wait in an outbox in the dashboard.
 - Follow every order through a timeline built from the driver's updates.
 - Manage drivers (with app PINs), vehicles and staff accounts. Admins set
   the Google Maps key, the Anthropic key and the model from the Settings
@@ -205,7 +205,7 @@ optimizer (distance matrix against haversine, the manual comparison,
 accepting a plan that moves orders between drivers, stale plans, kept
 routes, and refusing a solver plan that breaks a rule), and live tracking
 (staff-only WebSocket, positions stored once with the time they were
-taken, ETAs, customer texts sent once per event, Termii's request format,
+taken, ETAs, customer texts sent once per event, Termii's and Brevo's request formats,
 the public page revealing nothing it should not, and gap measurement).
 
 ## AI evals

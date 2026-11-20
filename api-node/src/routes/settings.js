@@ -15,7 +15,7 @@ const { z, parse } = require('../validation');
 const { requireAuth, STAFF } = require('../auth');
 const { encrypt, hint, canEncrypt } = require('../secrets');
 const { aiConfig, callAi, AI_KEYS } = require('../ai');
-const { smsConfig, sendTermii, SMS_KEYS } = require('../sms');
+const { smsConfig, deliver, SMS_KEYS } = require('../sms');
 const { phone } = require('../validation');
 
 const router = express.Router();
@@ -35,7 +35,7 @@ async function rowsFor(keys) {
 async function readSettings() {
   const by = await rowsFor([...Object.values(MAPS), ...Object.values(AI_KEYS), ...Object.values(SMS_KEYS)]);
   const sms = await smsConfig();
-  const smsRow = [SMS_KEYS.provider, SMS_KEYS.apiKey, SMS_KEYS.baseUrl, SMS_KEYS.senderId].map((k) => by[k]).filter(Boolean)
+  const smsRow = [SMS_KEYS.provider, SMS_KEYS.apiKey, SMS_KEYS.baseUrl, SMS_KEYS.senderId, SMS_KEYS.brevoKey, SMS_KEYS.brevoSender].map((k) => by[k]).filter(Boolean)
     .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))[0];
   const mapsKey = by[MAPS.mapsKey];
   const ai = await aiConfig();
@@ -70,6 +70,13 @@ async function readSettings() {
       key_unreadable: sms.keyUnreadable,
       public_app_url: sms.publicUrl,
       company_name: sms.company,
+      brevo: {
+        sender: sms.brevoSender,
+        api_key_set: !!sms.brevoApiKey,
+        api_key_hint: sms.brevoApiKey ? `${sms.brevoApiKey.slice(0, 6)}…${sms.brevoApiKey.slice(-4)}` : null,
+        key_source: sms.brevoKeySource,
+        key_unreadable: sms.brevoKeyUnreadable,
+      },
       can_save_secrets: canEncrypt(),
       updated_at: smsRow?.updated_at ?? null,
       updated_by: smsRow?.updated_by ?? null,
@@ -95,7 +102,9 @@ const updateSettings = z.object({
       .optional(),
   }).strict().optional(),
   sms: z.object({
-    provider: z.enum(['log', 'termii']).optional(),
+    provider: z.enum(['log', 'termii', 'brevo']).optional(),
+    brevo_api_key: z.string().trim().max(300).refine((v) => v === '' || /^[A-Za-z0-9_-]{20,}$/.test(v), 'Does not look like a Brevo API key (xkeysib-…)').optional(),
+    brevo_sender: z.string().trim().max(11).refine((v) => v === '' || /^[A-Za-z0-9]{3,11}$/.test(v), 'Brevo senders are 3 to 11 letters or digits, no spaces').optional(),
     base_url: z.string().trim().max(200).refine((v) => v === '' || /^https:\/\/[a-z0-9.-]+(:\d+)?\/?$/i.test(v), 'Use the https base URL from your Termii dashboard, for example https://v3.api.termii.com').optional(),
     api_key: z.string().trim().max(300).refine((v) => v === '' || /^[A-Za-z0-9_\-$]{10,}$/.test(v), 'Does not look like a Termii API key').optional(),
     sender_id: z.string().trim().max(11).refine((v) => v === '' || /^[A-Za-z0-9 ]{3,11}$/.test(v), 'Sender IDs are 3 to 11 letters or digits').optional(),
@@ -131,10 +140,11 @@ router.put('/', requireAuth('admin'), asyncHandler(async (req, res) => {
   // Encrypt first so a missing encryption key fails before anything is written.
   const encryptedKey = ai.api_key ? encrypt(ai.api_key) : ai.api_key;
   const encryptedSms = sms.api_key ? encrypt(sms.api_key) : sms.api_key;
+  const encryptedBrevo = sms.brevo_api_key ? encrypt(sms.brevo_api_key) : sms.brevo_api_key;
   const changes = [
     [SMS_KEYS.provider, sms.provider], [SMS_KEYS.baseUrl, sms.base_url?.replace(/\/$/, '')], [SMS_KEYS.apiKey, encryptedSms],
     [SMS_KEYS.senderId, sms.sender_id], [SMS_KEYS.channel, sms.channel], [SMS_KEYS.publicUrl, sms.public_app_url?.replace(/\/$/, '')],
-    [SMS_KEYS.company, sms.company_name],
+    [SMS_KEYS.company, sms.company_name], [SMS_KEYS.brevoKey, encryptedBrevo], [SMS_KEYS.brevoSender, sms.brevo_sender],
     [MAPS.mapsKey, gm.api_key], [MAPS.mapId, gm.map_id],
     [AI_KEYS.apiKey, encryptedKey], [AI_KEYS.model, ai.model],
   ].filter(([, v]) => v !== undefined);
@@ -155,16 +165,16 @@ router.post('/ai/check', requireAuth('admin'), asyncHandler(async (req, res) => 
   res.json(result);
 }));
 
-// POST /settings/sms/test { to } : send one test SMS with the saved Termii
+// POST /settings/sms/test { to } : send one test SMS with the saved provider
 // settings, so an admin can check them before customers rely on them.
 router.post('/sms/test', requireAuth('admin'), asyncHandler(async (req, res) => {
   const { to } = parse(z.object({ to: phone }).strict(), req.body);
   const cfg = await smsConfig();
-  if (cfg.provider !== 'termii') {
-    res.status(409).json({ error: 'Choose Termii as the SMS provider and save before sending a test' });
+  if (cfg.provider === 'log') {
+    res.status(409).json({ error: 'Choose Termii or Brevo as the SMS provider and save before sending a test' });
     return;
   }
-  const result = await sendTermii(cfg, to, `Test message from ${cfg.company}: SMS is set up.`);
+  const result = await deliver(cfg, to, `Test message from ${cfg.company || 'dispatch'}: SMS is set up.`, 'test');
   res.status(result.status === 'sent' ? 200 : 502).json(result.status === 'sent' ? { ok: true, message_id: result.providerMessageId } : { error: result.error });
 }));
 

@@ -23,8 +23,14 @@ before(async () => {
     let body = '';
     req.on('data', (c) => { body += c; });
     req.on('end', () => {
-      termiiCalls.push({ path: req.url, body: JSON.parse(body) });
+      termiiCalls.push({ path: req.url, body: JSON.parse(body), headers: req.headers });
       res.setHeader('Content-Type', 'application/json');
+      // Answers like Brevo on Brevo's path, like Termii otherwise.
+      if (req.url === '/v3/transactionalSMS/send') {
+        res.statusCode = 201;
+        res.end(JSON.stringify({ messageId: 1511882900176220 }));
+        return;
+      }
       res.end(JSON.stringify({ code: 'ok', message_id: 123, message_id_str: '123', message: 'Successfully Sent' }));
     });
   });
@@ -201,6 +207,34 @@ test('Termii: the key is write-only and messages go out in Termii\'s format', as
   assert.equal(b.type, 'plain');
   assert.equal(b.api_key, key);
   assert.match(b.sms, /your Swift Couriers delivery/);
+});
+
+test('Brevo: the key is write-only and messages go out in Brevo\'s format', async () => {
+  process.env.BREVO_API_URL = `http://127.0.0.1:${termii.address().port}`;
+  const key = 'xkeysib-abcdefghijklmnopqrstuvwxyz0123456789';
+  const saved = await api.put('/settings').set(as(admin)).send({ sms: { provider: 'brevo', brevo_api_key: key, brevo_sender: 'SwiftCour' } });
+  assert.equal(saved.status, 200);
+  assert.equal(saved.body.sms.provider, 'brevo');
+  assert.equal(saved.body.sms.brevo.api_key_hint, 'xkeysi…6789');
+  assert.ok(!JSON.stringify(saved.body).includes(key));
+  const { rows } = await ctx.pool.query("SELECT value FROM app_settings WHERE key = 'brevo_api_key'");
+  assert.match(rows[0].value, /^enc:v1:/);
+  assert.equal((await api.put('/settings').set(as(admin)).send({ sms: { brevo_sender: 'Has space' } })).status, 400);
+
+  termiiCalls = [];
+  const sent = await api.post(`/orders/${ids.order.id}/send-tracking`).set(as(staff));
+  assert.equal(sent.body.status, 'sent');
+  assert.equal(sent.body.provider, 'brevo');
+  assert.equal(sent.body.provider_message_id, '1511882900176220');
+  const call = termiiCalls[0];
+  assert.equal(call.path, '/v3/transactionalSMS/send');
+  assert.equal(call.headers['api-key'], key);
+  assert.deepEqual(Object.keys(call.body).sort(), ['content', 'recipient', 'sender', 'tag', 'type']);
+  assert.equal(call.body.recipient, '2348031110001');
+  assert.equal(call.body.sender, 'SwiftCour');
+  assert.equal(call.body.type, 'transactional');
+  assert.match(call.body.content, /track/);
+  delete process.env.BREVO_API_URL;
 });
 
 test('tracking quality counts gaps and the ones while the app was hidden', async () => {

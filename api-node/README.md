@@ -313,13 +313,22 @@ The socket closes with code 4001 when the token expires.
 
 Sent automatically once per order when the driver starts the trip to the
 dropoff (`en_route`) and when it is delivered (`delivered`), plus by hand.
-`sms` in `GET /settings` and `PUT /settings`: `provider` (`log` or
-`termii`), `base_url` (from the Termii dashboard), `api_key` (write-only,
-stored encrypted, a masked hint comes back), `sender_id`, `channel` (`dnd`
-for transactional texts, or `generic`), `public_app_url` (the address in
-tracking links) and `company_name`. `POST /settings/sms/test { to }` sends
-one test message. Termii receives `{ api_key, to: "234...", from, sms,
-type: "plain", channel }` at `{base_url}/api/sms/send`.
+`sms` in `GET /settings` and `PUT /settings`: `provider` (`log`,
+`termii` or `brevo`), `public_app_url` (the address in tracking links) and
+`company_name`; for Termii `base_url` (from the Termii dashboard),
+`api_key`, `sender_id` and `channel` (`dnd` for transactional texts, or
+`generic`); for Brevo `brevo_api_key` and `brevo_sender`. API keys are
+write-only: stored encrypted, a masked hint comes back. `POST
+/settings/sms/test { to }` sends one test message through the chosen
+provider.
+
+- Termii receives `{ api_key, to: "234...", from, sms, type: "plain",
+  channel }` at `{base_url}/api/sms/send`.
+- Brevo receives `{ sender, recipient: "234...", content, type:
+  "transactional", tag }` at `https://api.brevo.com/v3/transactionalSMS/send`
+  with an `api-key` header, and answers 201 with `messageId`. Brevo needs a
+  sender registered for Nigeria; Nigerian networks reject unregistered and
+  numeric senders.
 
 ### Settings
 
